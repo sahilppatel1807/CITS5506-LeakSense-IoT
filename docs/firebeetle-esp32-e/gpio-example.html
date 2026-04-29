@@ -1,0 +1,707 @@
+<!doctype html>
+<html dir="ltr" lang="en">
+  <head >
+    <meta  charset="utf-8"><meta  name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"><meta  name="apple-mobile-web-app-capable" content="yes"><meta  data-hid="robots" name="robots" content="max-image-preview:large"><meta  data-hid="keywords" name="keywords" content="FireBeetle 2 ESP32-E, Arduino, GPIO, example code, digital write, digital read, analog read, PWM output, LED, button, potentiometer, ESP32"><meta  data-hid="description" name="description" content="Download and run Arduino example code for FireBeetle 2 ESP32-E. This example code shows you how to use digital write, digital read, analog read, and PWM output functionalities."><meta  data-hid="og:locale" property="og:locale" content="en_US"><meta  data-hid="og:type" property="og:type" content="website"><meta  data-hid="og:title" property="og:title" content="FireBeetle 2 ESP32-E Example Code: Master Arduino-GPIO ?"><meta  data-hid="og:description" property="og:description" content="Explore Arduino example codes for FireBeetle 2 ESP32-E, showcasing digital and analog pin interactions with LEDs, buttons, and potentiometers. Perfect for developers and IoT enthusiasts!"><meta  data-hid="og:url" property="og:url" content="https://wiki.dfrobot.com/dfr0654/docs/23252"><meta  data-hid="og:site_name" property="og:site_name" content="FireBeetle 2 ESP32-E Example Code for Arduino-GPIO | DFRobot Wiki"><meta  data-hid="og:image" property="og:image" content="https://wiki.dfrobot.com/images/dfrobot_wiki_socialmedia_og_image.png"><meta  data-hid="og:image:alt" property="og:image:alt" content="dfrobot_wiki_img"><meta  data-hid="twitter:card" property="twitter:card" content="summary_large_image"><meta  data-hid="twitter:site" property="twitter:site" content="@wiki"><meta  data-hid="twitter:creator" property="twitter:creator" content="@wiki"><meta  data-hid="twitter:title" property="twitter:title" content="FireBeetle 2 ESP32-E Example Code: Master Arduino-GPIO ?"><meta  data-hid="twitter:description" property="twitter:description" content="Explore Arduino example codes for FireBeetle 2 ESP32-E, showcasing digital and analog pin interactions with LEDs, buttons, and potentiometers. Perfect for developers and IoT enthusiasts!"><meta  data-hid="twitter:image" property="twitter:image" content="https://wiki.dfrobot.com/images/dfrobot_wiki_socialmedia_og_image.png"><meta  data-hid="twitter:image:alt" property="twitter:image:alt" content="dfrobot_wiki_img"><title>FireBeetle 2 ESP32-E Example Code for Arduino-GPIO | DFRobot Wiki</title><base href="/"><link  rel="canonical" href="https://wiki.dfrobot.com/dfr0654/docs/23252"><link  rel="stylesheet" href="/css/pc.css"><link  rel="stylesheet" href="/css/article_pc.css"><link  rel="stylesheet" href="/libs/swiper/swiper-bundle.min.css"><style data-n-head="vuetify" type="text/css" id="vuetify-theme-stylesheet" nonce="undefined">.v-application a { color: #1976d2; }
+.v-application .primary {
+  background-color: #1976d2 !important;
+  border-color: #1976d2 !important;
+}
+.v-application .primary--text {
+  color: #1976d2 !important;
+  caret-color: #1976d2 !important;
+}
+.v-application .primary.lighten-5 {
+  background-color: #c7fdff !important;
+  border-color: #c7fdff !important;
+}
+.v-application .primary--text.text--lighten-5 {
+  color: #c7fdff !important;
+  caret-color: #c7fdff !important;
+}
+.v-application .primary.lighten-4 {
+  background-color: #a8e0ff !important;
+  border-color: #a8e0ff !important;
+}
+.v-application .primary--text.text--lighten-4 {
+  color: #a8e0ff !important;
+  caret-color: #a8e0ff !important;
+}
+.v-application .primary.lighten-3 {
+  background-color: #8ac5ff !important;
+  border-color: #8ac5ff !important;
+}
+.v-application .primary--text.text--lighten-3 {
+  color: #8ac5ff !important;
+  caret-color: #8ac5ff !important;
+}
+.v-application .primary.lighten-2 {
+  background-color: #6aaaff !important;
+  border-color: #6aaaff !important;
+}
+.v-application .primary--text.text--lighten-2 {
+  color: #6aaaff !important;
+  caret-color: #6aaaff !important;
+}
+.v-application .primary.lighten-1 {
+  background-color: #488fef !important;
+  border-color: #488fef !important;
+}
+.v-application .primary--text.text--lighten-1 {
+  color: #488fef !important;
+  caret-color: #488fef !important;
+}
+.v-application .primary.darken-1 {
+  background-color: #005eb6 !important;
+  border-color: #005eb6 !important;
+}
+.v-application .primary--text.text--darken-1 {
+  color: #005eb6 !important;
+  caret-color: #005eb6 !important;
+}
+.v-application .primary.darken-2 {
+  background-color: #00479b !important;
+  border-color: #00479b !important;
+}
+.v-application .primary--text.text--darken-2 {
+  color: #00479b !important;
+  caret-color: #00479b !important;
+}
+.v-application .primary.darken-3 {
+  background-color: #003180 !important;
+  border-color: #003180 !important;
+}
+.v-application .primary--text.text--darken-3 {
+  color: #003180 !important;
+  caret-color: #003180 !important;
+}
+.v-application .primary.darken-4 {
+  background-color: #001e67 !important;
+  border-color: #001e67 !important;
+}
+.v-application .primary--text.text--darken-4 {
+  color: #001e67 !important;
+  caret-color: #001e67 !important;
+}
+.v-application .secondary {
+  background-color: #424242 !important;
+  border-color: #424242 !important;
+}
+.v-application .secondary--text {
+  color: #424242 !important;
+  caret-color: #424242 !important;
+}
+.v-application .secondary.lighten-5 {
+  background-color: #c1c1c1 !important;
+  border-color: #c1c1c1 !important;
+}
+.v-application .secondary--text.text--lighten-5 {
+  color: #c1c1c1 !important;
+  caret-color: #c1c1c1 !important;
+}
+.v-application .secondary.lighten-4 {
+  background-color: #a6a6a6 !important;
+  border-color: #a6a6a6 !important;
+}
+.v-application .secondary--text.text--lighten-4 {
+  color: #a6a6a6 !important;
+  caret-color: #a6a6a6 !important;
+}
+.v-application .secondary.lighten-3 {
+  background-color: #8b8b8b !important;
+  border-color: #8b8b8b !important;
+}
+.v-application .secondary--text.text--lighten-3 {
+  color: #8b8b8b !important;
+  caret-color: #8b8b8b !important;
+}
+.v-application .secondary.lighten-2 {
+  background-color: #727272 !important;
+  border-color: #727272 !important;
+}
+.v-application .secondary--text.text--lighten-2 {
+  color: #727272 !important;
+  caret-color: #727272 !important;
+}
+.v-application .secondary.lighten-1 {
+  background-color: #595959 !important;
+  border-color: #595959 !important;
+}
+.v-application .secondary--text.text--lighten-1 {
+  color: #595959 !important;
+  caret-color: #595959 !important;
+}
+.v-application .secondary.darken-1 {
+  background-color: #2c2c2c !important;
+  border-color: #2c2c2c !important;
+}
+.v-application .secondary--text.text--darken-1 {
+  color: #2c2c2c !important;
+  caret-color: #2c2c2c !important;
+}
+.v-application .secondary.darken-2 {
+  background-color: #171717 !important;
+  border-color: #171717 !important;
+}
+.v-application .secondary--text.text--darken-2 {
+  color: #171717 !important;
+  caret-color: #171717 !important;
+}
+.v-application .secondary.darken-3 {
+  background-color: #000000 !important;
+  border-color: #000000 !important;
+}
+.v-application .secondary--text.text--darken-3 {
+  color: #000000 !important;
+  caret-color: #000000 !important;
+}
+.v-application .secondary.darken-4 {
+  background-color: #000000 !important;
+  border-color: #000000 !important;
+}
+.v-application .secondary--text.text--darken-4 {
+  color: #000000 !important;
+  caret-color: #000000 !important;
+}
+.v-application .accent {
+  background-color: #82b1ff !important;
+  border-color: #82b1ff !important;
+}
+.v-application .accent--text {
+  color: #82b1ff !important;
+  caret-color: #82b1ff !important;
+}
+.v-application .accent.lighten-5 {
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+.v-application .accent--text.text--lighten-5 {
+  color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
+.v-application .accent.lighten-4 {
+  background-color: #f8ffff !important;
+  border-color: #f8ffff !important;
+}
+.v-application .accent--text.text--lighten-4 {
+  color: #f8ffff !important;
+  caret-color: #f8ffff !important;
+}
+.v-application .accent.lighten-3 {
+  background-color: #daffff !important;
+  border-color: #daffff !important;
+}
+.v-application .accent--text.text--lighten-3 {
+  color: #daffff !important;
+  caret-color: #daffff !important;
+}
+.v-application .accent.lighten-2 {
+  background-color: #bce8ff !important;
+  border-color: #bce8ff !important;
+}
+.v-application .accent--text.text--lighten-2 {
+  color: #bce8ff !important;
+  caret-color: #bce8ff !important;
+}
+.v-application .accent.lighten-1 {
+  background-color: #9fccff !important;
+  border-color: #9fccff !important;
+}
+.v-application .accent--text.text--lighten-1 {
+  color: #9fccff !important;
+  caret-color: #9fccff !important;
+}
+.v-application .accent.darken-1 {
+  background-color: #6596e2 !important;
+  border-color: #6596e2 !important;
+}
+.v-application .accent--text.text--darken-1 {
+  color: #6596e2 !important;
+  caret-color: #6596e2 !important;
+}
+.v-application .accent.darken-2 {
+  background-color: #467dc6 !important;
+  border-color: #467dc6 !important;
+}
+.v-application .accent--text.text--darken-2 {
+  color: #467dc6 !important;
+  caret-color: #467dc6 !important;
+}
+.v-application .accent.darken-3 {
+  background-color: #2364aa !important;
+  border-color: #2364aa !important;
+}
+.v-application .accent--text.text--darken-3 {
+  color: #2364aa !important;
+  caret-color: #2364aa !important;
+}
+.v-application .accent.darken-4 {
+  background-color: #004c90 !important;
+  border-color: #004c90 !important;
+}
+.v-application .accent--text.text--darken-4 {
+  color: #004c90 !important;
+  caret-color: #004c90 !important;
+}
+.v-application .error {
+  background-color: #ff5252 !important;
+  border-color: #ff5252 !important;
+}
+.v-application .error--text {
+  color: #ff5252 !important;
+  caret-color: #ff5252 !important;
+}
+.v-application .error.lighten-5 {
+  background-color: #ffe4d5 !important;
+  border-color: #ffe4d5 !important;
+}
+.v-application .error--text.text--lighten-5 {
+  color: #ffe4d5 !important;
+  caret-color: #ffe4d5 !important;
+}
+.v-application .error.lighten-4 {
+  background-color: #ffc6b9 !important;
+  border-color: #ffc6b9 !important;
+}
+.v-application .error--text.text--lighten-4 {
+  color: #ffc6b9 !important;
+  caret-color: #ffc6b9 !important;
+}
+.v-application .error.lighten-3 {
+  background-color: #ffa99e !important;
+  border-color: #ffa99e !important;
+}
+.v-application .error--text.text--lighten-3 {
+  color: #ffa99e !important;
+  caret-color: #ffa99e !important;
+}
+.v-application .error.lighten-2 {
+  background-color: #ff8c84 !important;
+  border-color: #ff8c84 !important;
+}
+.v-application .error--text.text--lighten-2 {
+  color: #ff8c84 !important;
+  caret-color: #ff8c84 !important;
+}
+.v-application .error.lighten-1 {
+  background-color: #ff6f6a !important;
+  border-color: #ff6f6a !important;
+}
+.v-application .error--text.text--lighten-1 {
+  color: #ff6f6a !important;
+  caret-color: #ff6f6a !important;
+}
+.v-application .error.darken-1 {
+  background-color: #df323b !important;
+  border-color: #df323b !important;
+}
+.v-application .error--text.text--darken-1 {
+  color: #df323b !important;
+  caret-color: #df323b !important;
+}
+.v-application .error.darken-2 {
+  background-color: #bf0025 !important;
+  border-color: #bf0025 !important;
+}
+.v-application .error--text.text--darken-2 {
+  color: #bf0025 !important;
+  caret-color: #bf0025 !important;
+}
+.v-application .error.darken-3 {
+  background-color: #9f0010 !important;
+  border-color: #9f0010 !important;
+}
+.v-application .error--text.text--darken-3 {
+  color: #9f0010 !important;
+  caret-color: #9f0010 !important;
+}
+.v-application .error.darken-4 {
+  background-color: #800000 !important;
+  border-color: #800000 !important;
+}
+.v-application .error--text.text--darken-4 {
+  color: #800000 !important;
+  caret-color: #800000 !important;
+}
+.v-application .info {
+  background-color: #2196f3 !important;
+  border-color: #2196f3 !important;
+}
+.v-application .info--text {
+  color: #2196f3 !important;
+  caret-color: #2196f3 !important;
+}
+.v-application .info.lighten-5 {
+  background-color: #d4ffff !important;
+  border-color: #d4ffff !important;
+}
+.v-application .info--text.text--lighten-5 {
+  color: #d4ffff !important;
+  caret-color: #d4ffff !important;
+}
+.v-application .info.lighten-4 {
+  background-color: #b5ffff !important;
+  border-color: #b5ffff !important;
+}
+.v-application .info--text.text--lighten-4 {
+  color: #b5ffff !important;
+  caret-color: #b5ffff !important;
+}
+.v-application .info.lighten-3 {
+  background-color: #95e8ff !important;
+  border-color: #95e8ff !important;
+}
+.v-application .info--text.text--lighten-3 {
+  color: #95e8ff !important;
+  caret-color: #95e8ff !important;
+}
+.v-application .info.lighten-2 {
+  background-color: #75ccff !important;
+  border-color: #75ccff !important;
+}
+.v-application .info--text.text--lighten-2 {
+  color: #75ccff !important;
+  caret-color: #75ccff !important;
+}
+.v-application .info.lighten-1 {
+  background-color: #51b0ff !important;
+  border-color: #51b0ff !important;
+}
+.v-application .info--text.text--lighten-1 {
+  color: #51b0ff !important;
+  caret-color: #51b0ff !important;
+}
+.v-application .info.darken-1 {
+  background-color: #007cd6 !important;
+  border-color: #007cd6 !important;
+}
+.v-application .info--text.text--darken-1 {
+  color: #007cd6 !important;
+  caret-color: #007cd6 !important;
+}
+.v-application .info.darken-2 {
+  background-color: #0064ba !important;
+  border-color: #0064ba !important;
+}
+.v-application .info--text.text--darken-2 {
+  color: #0064ba !important;
+  caret-color: #0064ba !important;
+}
+.v-application .info.darken-3 {
+  background-color: #004d9f !important;
+  border-color: #004d9f !important;
+}
+.v-application .info--text.text--darken-3 {
+  color: #004d9f !important;
+  caret-color: #004d9f !important;
+}
+.v-application .info.darken-4 {
+  background-color: #003784 !important;
+  border-color: #003784 !important;
+}
+.v-application .info--text.text--darken-4 {
+  color: #003784 !important;
+  caret-color: #003784 !important;
+}
+.v-application .success {
+  background-color: #4caf50 !important;
+  border-color: #4caf50 !important;
+}
+.v-application .success--text {
+  color: #4caf50 !important;
+  caret-color: #4caf50 !important;
+}
+.v-application .success.lighten-5 {
+  background-color: #dcffd6 !important;
+  border-color: #dcffd6 !important;
+}
+.v-application .success--text.text--lighten-5 {
+  color: #dcffd6 !important;
+  caret-color: #dcffd6 !important;
+}
+.v-application .success.lighten-4 {
+  background-color: #beffba !important;
+  border-color: #beffba !important;
+}
+.v-application .success--text.text--lighten-4 {
+  color: #beffba !important;
+  caret-color: #beffba !important;
+}
+.v-application .success.lighten-3 {
+  background-color: #a2ff9e !important;
+  border-color: #a2ff9e !important;
+}
+.v-application .success--text.text--lighten-3 {
+  color: #a2ff9e !important;
+  caret-color: #a2ff9e !important;
+}
+.v-application .success.lighten-2 {
+  background-color: #85e783 !important;
+  border-color: #85e783 !important;
+}
+.v-application .success--text.text--lighten-2 {
+  color: #85e783 !important;
+  caret-color: #85e783 !important;
+}
+.v-application .success.lighten-1 {
+  background-color: #69cb69 !important;
+  border-color: #69cb69 !important;
+}
+.v-application .success--text.text--lighten-1 {
+  color: #69cb69 !important;
+  caret-color: #69cb69 !important;
+}
+.v-application .success.darken-1 {
+  background-color: #2d9437 !important;
+  border-color: #2d9437 !important;
+}
+.v-application .success--text.text--darken-1 {
+  color: #2d9437 !important;
+  caret-color: #2d9437 !important;
+}
+.v-application .success.darken-2 {
+  background-color: #00791e !important;
+  border-color: #00791e !important;
+}
+.v-application .success--text.text--darken-2 {
+  color: #00791e !important;
+  caret-color: #00791e !important;
+}
+.v-application .success.darken-3 {
+  background-color: #006000 !important;
+  border-color: #006000 !important;
+}
+.v-application .success--text.text--darken-3 {
+  color: #006000 !important;
+  caret-color: #006000 !important;
+}
+.v-application .success.darken-4 {
+  background-color: #004700 !important;
+  border-color: #004700 !important;
+}
+.v-application .success--text.text--darken-4 {
+  color: #004700 !important;
+  caret-color: #004700 !important;
+}
+.v-application .warning {
+  background-color: #fb8c00 !important;
+  border-color: #fb8c00 !important;
+}
+.v-application .warning--text {
+  color: #fb8c00 !important;
+  caret-color: #fb8c00 !important;
+}
+.v-application .warning.lighten-5 {
+  background-color: #ffff9e !important;
+  border-color: #ffff9e !important;
+}
+.v-application .warning--text.text--lighten-5 {
+  color: #ffff9e !important;
+  caret-color: #ffff9e !important;
+}
+.v-application .warning.lighten-4 {
+  background-color: #fffb82 !important;
+  border-color: #fffb82 !important;
+}
+.v-application .warning--text.text--lighten-4 {
+  color: #fffb82 !important;
+  caret-color: #fffb82 !important;
+}
+.v-application .warning.lighten-3 {
+  background-color: #ffdf67 !important;
+  border-color: #ffdf67 !important;
+}
+.v-application .warning--text.text--lighten-3 {
+  color: #ffdf67 !important;
+  caret-color: #ffdf67 !important;
+}
+.v-application .warning.lighten-2 {
+  background-color: #ffc24b !important;
+  border-color: #ffc24b !important;
+}
+.v-application .warning--text.text--lighten-2 {
+  color: #ffc24b !important;
+  caret-color: #ffc24b !important;
+}
+.v-application .warning.lighten-1 {
+  background-color: #ffa72d !important;
+  border-color: #ffa72d !important;
+}
+.v-application .warning--text.text--lighten-1 {
+  color: #ffa72d !important;
+  caret-color: #ffa72d !important;
+}
+.v-application .warning.darken-1 {
+  background-color: #db7200 !important;
+  border-color: #db7200 !important;
+}
+.v-application .warning--text.text--darken-1 {
+  color: #db7200 !important;
+  caret-color: #db7200 !important;
+}
+.v-application .warning.darken-2 {
+  background-color: #bb5900 !important;
+  border-color: #bb5900 !important;
+}
+.v-application .warning--text.text--darken-2 {
+  color: #bb5900 !important;
+  caret-color: #bb5900 !important;
+}
+.v-application .warning.darken-3 {
+  background-color: #9d4000 !important;
+  border-color: #9d4000 !important;
+}
+.v-application .warning--text.text--darken-3 {
+  color: #9d4000 !important;
+  caret-color: #9d4000 !important;
+}
+.v-application .warning.darken-4 {
+  background-color: #802700 !important;
+  border-color: #802700 !important;
+}
+.v-application .warning--text.text--darken-4 {
+  color: #802700 !important;
+  caret-color: #802700 !important;
+}</style><script  src="/common/md5.min.js" ssr="true"></script><script  src="/common/jquery-2.1.1.min.js" ssr="true"></script><script  src="https://www.googletagmanager.com/gtag/js?id=G-KEFMZ0P9J0" ssr="false" async></script><script  src="/libs/gtag.js" ssr="false" async></script><script  type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"FireBeetle 2 ESP32-E Example Code for Arduino-GPIO | DFRobot Wiki","description":"For developers and IoT enthusiasts, this page provides Arduino example code for FireBeetle 2 ESP32-E. Learn to use digital write, read, analog read, and PWM output.","sampleType":"int ledPin = D7; //Define LED pin \nvoid setup(){\n   pinMode(ledPin, OUTPUT); \n   digitalWrite(ledPin, HIGH);\n}\n\nvoid loop(){\n}\n","author":{"@type":"Person","@id":"https://wiki.dfrobot.com/#organization"},"publisher":{"@type":"Organization","@id":"https://wiki.dfrobot.com/#organization"}}</script><script  type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"wiki","item":"https://wiki.dfrobot.com/"},{"@type":"ListItem","position":2,"name":"dfr0654","item":"https://wiki.dfrobot.com/dfr0654/"},{"@type":"ListItem","position":3,"name":"Example Code for Arduino-GPIO","item":"https://wiki.dfrobot.com/dfr0654/docs/23252"}]}</script><script  type="application/ld+json">{"@context":"https://schema.org","@type":"ImageObject","contentUrl":"https://wiki.dfrobot.com/images/dfrobot_wiki_socialmedia_og_image.png","creditText":"DFRobot","creator":{"@type":"Organization","name":"DFRobot"},"publisher":{"@type":"Organization","@id":"https://wiki.dfrobot.com/#organization"}}</script><script  src="/dfrobotshop/lib/dfpclib.js" ssr="true"></script><noscript  data-hid="facebook-no-script"><img height="1" width="1" style="display: none;" src="https://www.facebook.com/tr?id=517401871764527&ev=PageView&noscript=1" /></noscript><link rel="preload" href="/_nuxt/9e86fd7.js" as="script"><link rel="preload" href="/_nuxt/778c53f.js" as="script"><link rel="preload" href="/_nuxt/css/f8e0a27.css" as="style"><link rel="preload" href="/_nuxt/4aefe03.js" as="script"><link rel="preload" href="/_nuxt/css/628cafc.css" as="style"><link rel="preload" href="/_nuxt/6a345f2.js" as="script"><link rel="preload" href="/_nuxt/css/81b32aa.css" as="style"><link rel="preload" href="/_nuxt/197a583.js" as="script"><link rel="preload" href="/_nuxt/css/ff812fe.css" as="style"><link rel="preload" href="/_nuxt/37302d6.js" as="script"><link rel="stylesheet" href="/_nuxt/css/f8e0a27.css"><link rel="stylesheet" href="/_nuxt/css/628cafc.css"><link rel="stylesheet" href="/_nuxt/css/81b32aa.css"><link rel="stylesheet" href="/_nuxt/css/ff812fe.css">
+  </head>
+  <body >
+    <div data-server-rendered="true" id="__nuxt"><!----><div id="__layout"><div><div data-viewtype="pc" class="wiki-third-article-page"><div data-theme="pc" data-fetch-key="data-v-d71158b6:0" class="headFrame" data-v-d71158b6><div data-fetch-key="data-v-0d8b5951:0" data-v-0d8b5951 data-v-d71158b6><!----> <!----> <!----></div> <!----> <div class="head" data-v-d71158b6><div class="df-container" data-v-d71158b6><div class="logo" data-v-d71158b6><a href="https://www.dfrobot.com/" data-v-d71158b6><img src="/dfrobotshop/images/pc/logo.png" alt="logo" data-v-d71158b6></a></div> <div class="navigate" data-v-d71158b6><a href="javascript:;" data-v-d71158b6><button data-v-d71158b6>Store<i class="icon iconfont icon-downarrow2" data-v-d71158b6></i></button></a> <a href="https://community.dfrobot.com/" data-v-d71158b6>Community</a><a href="https://www.dfrobot.com/forum/" data-v-d71158b6>Forum</a><a href="https://wiki.dfrobot.com/" data-v-d71158b6>Wiki</a><a href="https://www.dfrobot.com/blog" data-v-d71158b6>Blog</a><a href="https://learn.dfrobot.com/" data-v-d71158b6>Learn</a></div> <div class="options" data-v-d71158b6><div class="search" data-v-d71158b6><button data-v-d71158b6><i class="icon iconfont icon-search" data-v-d71158b6></i></button></div> <div data-theme="pc" class="warehouse" data-v-d71158b6><!----> <!----> <!----></div> <div class="currency" data-v-d71158b6><button data-v-d71158b6>$USD</button> <ul class="dropdownMenu" style="display:none;" data-v-d71158b6><li data-v-d71158b6><a href="javascript:;" data-v-d71158b6>$USD</a></li><li data-v-d71158b6><a href="javascript:;" data-v-d71158b6>EUR€</a></li><li data-v-d71158b6><a href="javascript:;" data-v-d71158b6>£GBP</a></li></ul></div> <div class="wishlist" data-v-d71158b6><button data-v-d71158b6><i class="icon iconfont icon-hart" data-v-d71158b6></i></button></div> <div data-theme="pc" class="miniCart" data-v-adbdabb8 data-v-d71158b6><button data-v-adbdabb8><span data-v-adbdabb8></span> <i class="icon iconfont icon-gouwuche1" data-v-adbdabb8></i></button> <!----></div> <div class="user" data-v-d71158b6><button class="headImg" data-v-d71158b6><img src="/dfrobotshop/images/pc/nologinhead.png" alt="userhead" data-v-d71158b6></button> <ul class="dropdownMenu" style="display:none;" data-v-d71158b6><li class="name" data-v-d71158b6><b data-v-d71158b6>.</b> <span data-v-d71158b6><i class="icon iconfont icon-VIPicon" data-v-d71158b6></i>VIP</span></li> <li data-v-d71158b6><a href="https://www.dfrobot.com/account/" data-v-d71158b6>My Account</a></li> <li data-v-d71158b6><a href="https://www.dfrobot.com/account/order" data-v-d71158b6>Order History</a></li> <li data-v-d71158b6><a href="https://www.dfrobot.com/account/vip" data-v-d71158b6>VIP Benefits</a></li> <li data-v-d71158b6><a href="javascript:;" data-v-d71158b6>Logout</a></li></ul></div></div></div> <!----> <!----></div> <!----></div> <div class="fullwidth-2-columns"><div data-theme="pc" class="menu"><div class="menu-sticky-block"><div class="search-input-box"><i class="iconfont search icon-search1"></i> <input type="text" placeholder="Search" value=""></div> <a href="/dfr0654/" class="nav-back"><i class="iconfont icon-arrow-left"></i>
+      Go Back
+    </a> <div class="menu-title">FireBeetle 2 ESP32-E IoT Microcontroller</div> <div class="menu-list type_3"><!----> <!----> <ul><a href="/dfr0654/docs/23250"><span>1. Getting Started</span></a> <a href="/dfr0654/docs/23251"><span>2. Example Code for Arduino-Blink a LED</span></a> <a href="/dfr0654/docs/23252" class="active"><span>3. Example Code for Arduino-GPIO</span></a> <a href="/dfr0654/docs/23253"><span>4. Example Code for Arduino-RGB LED</span></a> <a href="/dfr0654/docs/23254"><span>5. Example Code for Arduino-Serial Port</span></a> <a href="/dfr0654/docs/23257"><span>6. Example Code for Arduino-I2C Communication</span></a> <a href="/dfr0654/docs/23258"><span>7. Example Code for Arduino-SPI Communication</span></a> <a href="/dfr0654/docs/23255"><span>8. Example Code for Arduino-Capacitive Touch</span></a> <a href="/dfr0654/docs/23256"><span>9. Example Code for Arduino-Interrupt</span></a> <a href="/dfr0654/docs/23259"><span>10. Example Code for Arduino-GDI Display interface</span></a> <a href="/dfr0654/docs/23261"><span>11. Example Code for Arduino-SD Card</span></a> <a href="/dfr0654/docs/23260"><span>12. Example Code for Arduino-Deep-sleep Mode</span></a> <a href="/dfr0654/docs/23262"><span>13. Example Code for Arduino-WiFi</span></a> <a href="/dfr0654/docs/23263"><span>14. Example Code for Arduino-Bluetooth</span></a> <a href="/dfr0654/docs/23264"><span>15. Example Code for Arduino-IFTTT</span></a> <a href="/dfr0654/docs/23265"><span>Reference</span></a> </ul></div></div></div> <div class="full"><div class="full-container"><ul data-theme="pc" class="breadcrumb"><li><i class="iconfont icon-home2"></i> <a href="/">wiki</a></li><li><!----> <a href="/dfr0654/">dfr0654</a></li><li><!----> <span>Example Code for Arduino-GPIO</span></li></ul> <div class="article-2-columns"><div class="wiki-article-content"><h1>Example Code for Arduino-GPIO</h1> <p class="date">Last revision 2026/01/31</p> <p class="desc">This article provides comprehensive example codes for Arduino GPIO usage, focusing on digital write/read, analog read, and PWM output with the FireBeetle 2 ESP32-E, enabling users to control LEDs and read sensor values.</p> <article id="htmlContent" class="panel-body markdown-body"><h2>1. Digital  Write Pin</h2>
+<h3>Hardware Preparation</h3>
+<ul>
+<li><a href="https://www.dfrobot.com/product-2195.html">FireBeetle 2 ESP32-E</a> (SKU: DFR0654) ×1</li>
+<li><a href="https://www.dfrobot.com/product-492.html">Gravity: Digital Blue LED Light Module</a> (SKU: DFR0021-B) ×1</li>
+<li>USB cable  ×1</li>
+</ul>
+<h3>Wiring Diagram</h3>
+<p><img src="https://dfimg.dfrobot.com/nobody/wiki/bb4c92046ae9116a608c96429e63587b_0x0.png.webp" alt="DFR0654-LED wiring diagram" title="DFR0654-LED wiring diagram"></p>
+<h3>Sample Code</h3>
+<p>When the digital pin outputs high, the LED turns on.</p>
+<pre><code class="language-arduino">int ledPin = D7; //Define LED pin 
+void setup(){
+   pinMode(ledPin, OUTPUT); 
+   digitalWrite(ledPin, HIGH);
+}
+
+void loop(){
+}
+</code></pre>
+<h3>Result</h3>
+<p>When the program is uploaded, the blue LED lights up.</p>
+<h2>2. Digital Read Pin</h2>
+<h3>Hardware Preparation</h3>
+<ul>
+<li><a href="https://www.dfrobot.com/product-2195.html">FireBeetle 2 ESP32-E</a> (SKU: DFR0654) ×1</li>
+<li><a href="https://www.dfrobot.com/product-73.html">Gravity: Digital Yellow Push Button</a> (SKU: DFR0029-Y) ×1</li>
+<li>USB cable  ×1</li>
+</ul>
+<h3>Wiring Diagram</h3>
+<p><img src="https://dfimg.dfrobot.com/nobody/wiki/c598e6ad98e1d8d9819688800f0d81c5_0x0.png.webp" alt="DFR0654-Button wiring diagram" title="DFR0654-Button wiring diagram"></p>
+<h3>Sample Code</h3>
+<p>The on-board LED lights up when the button is pressed, and turns off when released.</p>
+<pre><code class="language-arduino">int buttonPin = D7;   //Define button pin  
+int ledPin = D9;     //Define LED pin 
+int buttonState = 0;  //Variable for reading button statu
+
+void setup(){
+   pinMode(buttonPin, INPUT); 
+   pinMode(ledPin, OUTPUT);
+}
+
+void loop(){
+   buttonState = digitalRead(buttonPin); //Read the status of button value 
+
+   if(buttonState == HIGH){    //If the button is pressed 
+     digitalWrite(ledPin,HIGH);
+   } else{
+     digitalWrite(ledPin,LOW);
+   }
+}
+</code></pre>
+<h3>Results</h3>
+<p>When the program is uploaded, press down the button connected to pin D7, the on-board LED turns on; Release, it goes off.</p>
+<h2>3. Analog Read Pin</h2>
+<h3>Hardware Preparation</h3>
+<ul>
+<li><a href="https://www.dfrobot.com/product-2195.html">FireBeetle 2 ESP32-E</a> (SKU: DFR0654) ×1</li>
+<li><a href="https://www.dfrobot.com/product-87.html">Gravity: Analog Rotation Potentiometer Sensor for Arduino - Rotation 300°</a> (SKU: DFR0054) ×1</li>
+<li>USB cable  ×1</li>
+</ul>
+<h3>Wiring Diagram</h3>
+<p><img src="https://dfimg.dfrobot.com/nobody/wiki/03a1bbe2a44a2014aad9885aa8b53661_0x0.png.webp" alt="DFR0654-ADC wiring diagram" title="DFR0654-ADC wiring diagram"></p>
+<h3>Other Preparation Work</h3>
+<p><a href="https://wiki.analog.com/university/courses/electronics/text/chapter-20">Analog-to-Digital converters (ADC)</a> translate analog signals, real world signals like temperature, pressure, voltage, current, distance, or light intensity, into a digital representation of that signal. This digital representation can then be processed, manipulated, computed, transmitted or stored. FireBeetle 2 ESP32-E has a 12-bit ADC with a max output of 4095.</p>
+<p><strong>Note: The ADC on ESP32 can only measure around 2.5V instead of 3.3V, as shown in the example below.</strong></p>
+<h3>Sample Code</h3>
+<p>The program below can be used to read the sensor module connected to the pin IO15/A4, and then print out the real-time analog angle sensor readings and the detected voltage on serial  monitor.</p>
+<pre><code class="language-arduino">int sensorPin = A4;   //  Define analog angle sensor pin
+int sensorValue = 0;
+
+void setup(){
+   pinMode(sensorPin, INPUT); 
+   Serial.begin(9600);   //Initialize serial port
+}
+
+void loop(){
+   sensorValue = analogRead(sensorPin);    //Read the sensor value on analog pin A4           
+   Serial.printf(&quot;sensor value: %d\n&quot;, sensorValue);  //Print the read sensor value  
+   Serial.printf(&quot;voltage: %.3fV\n&quot;, sensorValue * 3.26 / 4095);  //Print the detected voltage
+   delay(100);
+}
+</code></pre>
+<h3>Result</h3>
+<p>Open the serial monitor and you can see the current value from the angle sensor printed in it. When the angle sensor is rotated, the printed value changes accordingly. It can be observed that when the sensor value is 4095, the detected voltage is about 3.3V.</p>
+<p><img src="https://dfimg.dfrobot.com/nobody/wiki/1b2006573d0b97b3d8200755e7f72ab1_0x0.png.webp" alt="DFR0654-ADC result" title="DFR0654-ADC result"></p>
+<h2>4. PWM Output (Analog Write)</h2>
+<h3>Hardware Preparation</h3>
+<ul>
+<li><a href="https://www.dfrobot.com/product-2195.html">FireBeetle 2 ESP32-E</a> (SKU: DFR0654) ×1</li>
+<li>USB cable  ×1</li>
+</ul>
+<h3>Other Preparation Work</h3>
+<p>PWM (Pulse Width Modulation) is a very effective technique to control analog circuits using the digital output of MCU. It is widely used in many fields such as lighting control, motor speed control, measurement, communication, power control and conversion.</p>
+<p>The PWM controller of ESP32 has 16 independent channels, which can be configured to generate PWM signals with different properties. All pins that can be used as outputs can serve as PWM pins (GPIO 34 to 39 cannot generate PWM).</p>
+<p>In the Arduino IDE, PWM output is defined as analog output. When using Arduino for PWM LED dimming, you should follow the steps below:</p>
+<ol>
+<li>
+<p>First, select a PWM channel. There are 16 channels from 0 to 15.</p>
+</li>
+<li>
+<p>Then, set the PWM signal frequency. For LEDs, a frequency of 5000 Hz is suitable.</p>
+</li>
+<li>
+<p>Set the duty cycle resolution of the signal, ranging from 1 to 16 bits. Here an 8-bit resolution is used. And we can use the value between 0 and 255 (2 to the power of 8) to control the LED brightness.</p>
+</li>
+</ol>
+<p>The sample code below will demonstrate how to drive the onboard LED using PWM to display a breathing light effect. No external hardware connection is required for this example.</p>
+<h3>Sample Code</h3>
+<p>Function: Drive the onboard LED using PWM to display a breathing light effect.</p>
+<pre><code class="language-arduino">const int ledPin = D9; //Define LED Pin
+const int freq = 5000;   //Set PWM signal frequency
+const int ledChannel = 0;   //There are 16 channels from 0 to 15, set to PWM channel 0
+const int resolution = 8;    //Set the duty cycle resolution of the signal, from 1 to 16 bits. Select 8-bit resolution here, ranging from 0 to 255
+
+void setup(){
+  ledcSetup(ledChannel,freq,resolution);
+  ledcAttachPin(ledPin,ledChannel);    //Set the pin for outputting PWM signals and the channel for generating PWM signals
+
+}
+
+void loop(){
+  for(int dutyCycle = 0;dutyCycle &lt;= 255;dutyCycle++){
+    ledcWrite(ledChannel,dutyCycle);   
+    delay(15);
+  }
+  for(int dutyCycle = 255;dutyCycle &gt;= 0;dutyCycle--){
+    ledcWrite(ledChannel,dutyCycle);
+    delay(15);
+  }
+}
+</code></pre>
+<h3>Result</h3>
+<p>After the program is uploaded successfully, the light intensity of the on-board green LED appears to rise and fall in a manner that resembles human breathing.</p>
+</article> <div data-theme="pc" class="helpful-survey"><div class="begining-survey"><p>Was this article helpful?</p> <div class="buttons"><button><i class="iconfont icon-thumbs-up"></i></button> <button><i class="iconfont icon-thumbs-down"></i></button></div></div> <div class="further-survey"></div> <!----></div></div> <div class="wiki-article-fast-navigation"><div class="float-box"><p>ON THIS PAGE</p> <ul id="navbar-content" class="content-nav"><li><a href="javascript:;">1. Digital  Write Pin</a> <a href="javascript:;" class="children">Hardware Preparation</a><a href="javascript:;" class="children">Wiring Diagram</a><a href="javascript:;" class="children">Sample Code</a><a href="javascript:;" class="children">Result</a></li><li><a href="javascript:;">2. Digital Read Pin</a> <a href="javascript:;" class="children">Hardware Preparation</a><a href="javascript:;" class="children">Wiring Diagram</a><a href="javascript:;" class="children">Sample Code</a><a href="javascript:;" class="children">Results</a></li><li><a href="javascript:;">3. Analog Read Pin</a> <a href="javascript:;" class="children">Hardware Preparation</a><a href="javascript:;" class="children">Wiring Diagram</a><a href="javascript:;" class="children">Other Preparation Work</a><a href="javascript:;" class="children">Sample Code</a><a href="javascript:;" class="children">Result</a></li><li><a href="javascript:;">4. PWM Output (Analog Write)</a> <a href="javascript:;" class="children">Hardware Preparation</a><a href="javascript:;" class="children">Other Preparation Work</a><a href="javascript:;" class="children">Sample Code</a><a href="javascript:;" class="children">Result</a></li></ul></div></div></div></div></div></div> <div data-theme="pc" class="scroll-top" style="opacity:0;"><i class="iconfont icon-uparrow"></i>
+  TOP
+</div> <footer data-theme="pc"><div class="df-container con xs"><div class="nav"><div class="left"><span><b>Information</b> <a href="https://www.dfrobot.com/about-us">About Us</a><a href="https://www.dfrobot.com/warranty">Warranty</a><a href="https://www.dfrobot.com/privacy-policy">Terms &amp; Conditions</a><a href="https://www.dfrobot.com/shipping">Shipping</a><a href="https://www.dfrobot.com/payment">Payment</a><a href="https://www.dfrobot.com/faq">FAQ</a></span><span><b>Customer Service</b> <a href="https://www.dfrobot.com/distributor">DFRobot Distributors</a><a href="https://www.dfrobot.com/contact-us">Contact Us</a><a href="https://www.dfrobot.com/site-map">Site Map</a></span><span><b>My Account</b> <a href="https://www.dfrobot.com/affiliates">Affiliates</a><a href="https://www.dfrobot.com/special.html">Specials</a></span></div> <div class="right"><a href="https://www.dfrobot.com/"><img src="/dfrobotshop/images/pc/logo.png" alt="logo"></a> <div class="subscribe"><b>Sign up for exclusive offers!</b> <form id="mc-embedded-subscribe-form" action="//DFRobot.us16.list-manage.com/subscribe/post?u=e384b3074873a648e7d3237cc&id=316955a8ff" method="post" name="mc-embedded-subscribe-form" target="_blank" novalidate="novalidate" class="validate"><div id="mc_embed_signup_scroll" class="footer_scroll"><input id="subscribeEmail" type="email" value name="EMAIL" placeholder="Your email address" required="required" class="email"> <div aria-hidden="true" style="position: absolute; left: -5000px;"><input type="text" name="b_e384b3074873a648e7d3237cc_316955a8ff" tabindex="-1" value></div> <button id="subscribeBtn" aria-label="subscribe" type="submit" name="subscribe"><i class="icon iconfont icon-fangxiangyi"></i></button></div></form></div> <div class="like"><b>Like us on</b> <span><a href="https://www.facebook.com/DFrobot" title="dfrobot facebook" target="_blank"><i class="icon iconfont icon-facebook1"></i></a> <a href="https://twitter.com/dfrobotcn" title="dfrobot twitter" target="_blank"><i class="icon iconfont icon-twitter"></i></a> <a href="https://discord.com/invite/wr4szfVUZ7" title="dfrobot discord" target="_blank"><i class="icon iconfont icon-discord"></i></a> <a href="https://www.linkedin.com/company/dfrobot" title="dfrobot linkedin" target="_blank"><i class="icon iconfont icon-linkedin"></i></a> <a href="https://www.youtube.com/user/DFROBOTCN" title="dfrobot youtube" target="_blank"><i class="icon iconfont icon-YouTube"></i></a> <a href="https://www.tiktok.com/@dfrobot_official" title="dfrobot tiktok" target="_blank"><i class="icon iconfont icon-douyin-icon"></i></a></span></div></div></div> <div class="copyright">Copyright © 2025 DFRobot. All rights reserved.</div></div></footer> <!----></div></div></div></div><script>window.__NUXT__=(function(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,_,$,aa,ab,ac,ad,ae,af,ag,ah,ai,aj,ak,al,am,an,ao,ap,aq,ar,as,at,au,av,aw,ax,ay,az,aA,aB,aC,aD,aE,aF,aG,aH,aI,aJ,aK,aL,aM,aN,aO,aP,aQ,aR,aS,aT,aU,aV,aW,aX,aY,aZ,a_,a$,ba,bb,bc,bd,be,bf,bg){aR[0]={description:a,link:"\u002Fnew-products.html",submenu:[],title:"New Products"};aR[1]={description:a,link:a,submenu:[{description:"6 TOPS LLM MCP AI Vision Sensor (20+ Models, Deploy Custom Models)",link:"\u002Fproduct-2995.html",title:"Huskylens 2"},{description:"AI learning device designed for education",link:"\u002Ftopic-314.html",title:"UNIHIKER"},{description:"A Palm-Sized X86 Single Board Computer Powered by the Intel N150",link:"\u002Fproduct-2989.html",title:"LattePanda IOTA"},{description:"A micro x86 compute module featuring Intel N100 quad-core processor",link:"\u002Fkit-004.html",title:"LattePanda Mu"},{description:aS,link:aT,title:"ESP32"},{description:aU,link:aV,title:aW},{description:aX,link:aY,title:aZ},{description:"Compatible with 1V\u002F2V\u002F3V\u002F5V\u002F9V\u002F12V\u002F18V solar panels ",link:"\u002Fproduct-1712.html",title:"Solar Power Manager"},{description:"mmwave sensor, ultrasonic sensor, lightning distance sensor, infrared proximity sensor",link:a_,title:a$}],title:"Featured"};aR[2]={description:a,link:a,submenu:[{description:a,link:"\u002Ftopic-284.html",title:g},{description:"NVIDIA Jetson Orin, ESP32-CAM, other boards based on ARM and RISC-V AI processor",link:"\u002Ftopic-284-184.html",title:"AI Development Boards"},{description:"Language learning voice recognition sensor, AI vision sensor, AI vision camera",link:"\u002Ftopic-284-36.html",title:"AI Sensors"},{description:"NVIDIA Jetson Orin \u002F Nano \u002F Xavier carrier boards, OpenMV Cam shields",link:"\u002Ftopic-284-156.html",title:"AI Modules"},{description:"Jetson Nano accessories and other smart tools",link:"\u002Ftopic-284-66.html",title:"AI Prototyping & Accessories"},{description:a,link:"\u002Ftopic-284-140.html",title:"AI Kits"}],title:"AI Hardware"};aR[3]={description:a,link:a,submenu:[{description:a,link:"\u002Ftopic-277.html",title:g},{description:"Arduino UNO R4 \u002F R3, Arduino Mega 2560, Arduino Leonardo, Arduino Nano and other boards compatible with Arduino",link:"\u002Ftopic-277-184.html",title:"Arduino Development Boards"},{description:"mmwave sensor, voice recognition sensor, ultrasonic sensor, gas sensor and other sensors compatible with Arduino",link:"\u002Ftopic-277-36.html",title:"Arduino Sensors"},{description:"MP3 player, IO Expansion Shield, DAC module, LCD display module, NB-IoT \u002F LTE \u002F GNSS \u002F GPRS \u002F GPS Expansion Shield",link:"\u002Ftopic-277-156.html",title:"Arduino Modules"},{description:"Arduino beginner kit with detailed tutorials, arduino sensor kit, arduino robot kit, arduino coding kit",link:"\u002Ftopic-277-140.html",title:"Arduino Kits"},{description:"Prototyping shields, cables, connectors, USB power supply, battery holder",link:"\u002Ftopic-277-66.html",title:"Arduino Prototyping & Accessories"}],title:"Arduino"};aR[4]={description:a,link:a,submenu:[{description:a,link:"\u002Fcategory-184.html",title:g},{description:"Raspberry Pi, LattePanda, NVIDIA, ARM",link:"\u002Fcategory-311.html",title:"Single Board Computer"},{description:ba,link:"\u002Fcategory-188.html",title:bb},{description:"x86 Windows \u002F Linux single board computer, server, compute module",link:"\u002Fcategory-186.html",title:"LattePanda Dev Board"},{description:"NVIDIA Jetson Orin Nano, NVIDIA Jetson AGX Orin",link:"\u002Fcategory-268.html",title:"NVIDIA"},{description:"UNIHIKER, Raspberry Pi CM 5, ROCK Pi",link:"\u002Fcategory-294.html",title:"ARM"},{description:"Arduino, ESP32 & ESP8266, micro:bit",link:"\u002Fcategory-312.html",title:"MCU"},{description:"Development boards compatible with Arduino: DFRduino , Beetle, Romeo, Bluno, Xboard",link:"\u002Fcategory-185.html",title:"Arduino Board"},{description:bc,link:"\u002Fcategory-271.html",title:"ESP32 & ESP8266"},{description:"A pocket-sized computer designed to inspire creative thinking in children",link:"\u002Fcategory-257.html",title:bd},{description:"PYNQ-Z2, Calliope, Particle, Maixduino, CurieCore",link:"\u002Fcategory-52.html",title:X}],title:x};aR[5]={description:a,link:a,submenu:[{description:aS,link:aT,title:g},{description:"Low power consumption microcontroller intentionally designed for IoT projects",link:"\u002Ftopic-302.html",title:"FireBeetle"},{description:"IoT hardwares and IoT home automation devices",link:"\u002Ftopic-276.html",title:"Internet of Things - IoT"},{description:bc,link:"\u002Ftopic-302-184.html",title:x},{description:"Sensors compatible with ESP32",link:"\u002Ftopic-302-36.html",title:l},{description:"IO Shield, OLED Display, LoRa Radio, LED Matrix, Terminal Block Board for FireBeetle ESP32",link:"\u002Ftopic-302-156.html",title:k},{description:"Hackster & DFRobot AI \u002F IoT \u002F Environmental Sensor Starter EEDU Kit",link:"\u002Ftopic-302-140.html",title:Y},{description:"Prototyping board, Enclosure for FireBeetle, Patch Test Hook",link:"\u002Ftopic-302-66.html",title:m}],title:"ESP32 \u002F ESP8266"};aR[6]={description:a,link:a,submenu:[{description:a,link:"\u002Ftopic-278.html",title:g},{description:"LattePanda Mu, LattePanda Sigma, LattePanda 3 Delta, LattePanda 2 Alpha \u002F Delta, LattePanda V1",link:"\u002Ftopic-278-184.html",title:"LattePanda Boards"},{description:"Carrier Board for LattePanda Mu, touch display, UPS hat, network card for LattePanda",link:"\u002Ftopic-278-156.html",title:k},{description:"Cases, streaming cable, cooler, heat sink, power cable, power supply for LattePanda",link:"\u002Ftopic-278-66.html",title:"LattePanda Accessories"},{description:"Camera, GPS receiver for LattePanda",link:"\u002Ftopic-278-36.html",title:l},{description:"LattePanda Mu evaluation kit, LattePanda board with case & streaming cable & touch display kit",link:"\u002Ftopic-278-140.html",title:"LattePanda Kits"}],title:"LattePanda"};aR[7]={description:a,link:a,submenu:[{description:a,link:"\u002Fcategory-156.html",title:g},{description:"DC \u002F Stepper \u002F Brushless \u002F Geared \u002F TT motor and motor driver, servo, relay module, peristaltic pump",link:"\u002Fcategory-51.html",title:"Motors & Actuators & Drivers"},{description:"3G\u002F4G\u002F5G, Lora, WiFi, Bluetooth, NB-IoT, Ethernet, GSM\u002FGPRS\u002FGPS, Serial, CANBUS & OBD, RFID, Infra Red, Radio (RF), Xbee \u002F Zigbee",link:"\u002Fcategory-45.html",title:"Communications"},{description:"DFPlayer, mini MP3 player, speaker module, audio analyzer module, digital buzzer, audio amplifier",link:"\u002Fcategory-259.html",title:"Audio"},{description:"IO Expansion Shield, UPS HAT, Carrier Board for Arduino \u002F Raspberry Pi \u002F micro:bit \u002F LattePanda",link:"\u002Fcategory-269.html",title:"IO Expansion Shields & HATs"},{description:"eDP touch display, IPS display, DSI touchscreen, capacitive touch panel, LED matrix, OLED display, LEDs",link:"\u002Fcategory-53.html",title:"LCDs\u002FLEDs\u002FE-ink\u002FDisplays"},{description:"ADC Module, DAC Module",link:"\u002Fcategory-261.html",title:"AD\u002FDA Converter"},{description:"Real-time clock module",link:"\u002Fcategory-232.html",title:"RTC Modules"},{description:"MicroSD card module, 16GB 32GB 64GB 128GB MicroSD memory card",link:"\u002Fcategory-213.html",title:"Storage Modules"},{description:"Solar power manager, battery holder, DC-DC buck converter, wireless charging module",link:"\u002Fcategory-70.html",title:"Power Modules"},{description:"GamePad, joystick, sensor adapter",link:"\u002Fcategory-215.html",title:X}],title:k};aR[8]={description:a,link:a,submenu:[{description:a,link:"\u002Fcategory-66.html",title:g},{description:"Heatsink, cooling fan, DIN rail mount bracket, VESA mounting kit",link:"\u002Fcategory-96.html",title:"Accessories"},{description:"Buttons, headers, LEDs, resistors, capacitors, diodes & transistors, crystals",link:"\u002Fcategory-219.html",title:"Electronics"},{description:"Case for Raspberry Pi, LattePanda, micro:bit, Arduino UNO, Jetson Nano",link:"\u002Fcategory-303.html",title:"Enclosure&Case"},{description:"Power supply, solar panel, AA batteries holder",link:"\u002Fcategory-92.html",title:"Power"},{description:"Jumper wires, power cables, USB data cables, gravity module cables, audio & video cables, Ethernet cable",link:"\u002Fcategory-86.html",title:"Cables and Wires"},{description:"micro:Maqueen mechanic, robot gripper, rubber wheels, mecanum wheels, screw",link:"\u002Fcategory-46.html",title:"Mechanics"},{description:"Electric solenoid lock, hot plate preheater, straight\u002Fcross screwdriver",link:"\u002Fcategory-43.html",title:"Tools"},{description:"Bread board self adhesive, prototyping shield for arduino, flexible single sided protoBoard",link:"\u002Fcategory-67.html",title:"Breadboards & Protoboards"},{description:"Soldering station, soldering starter tools, soldering iron welding tool kit",link:"\u002Fcategory-115.html",title:"Soldering"},{description:"Wireless keyboard for Raspberry Pi and LattePanda",link:"\u002Fcategory-270.html",title:"Keyboards"},{description:"Electroluminecent wire",link:"\u002Fcategory-132.html",title:"EL Wires"}],title:m};aR[9]={description:a,link:a,submenu:[{description:a,link:"\u002Ftopic-272.html",title:g},{description:ba,link:"\u002Ftopic-272-184.html",title:"Raspberry Pi Boards"},{description:"Heatsink, cooling case, power supply and cables for Raspberry Pi",link:"\u002Ftopic-272-66.html",title:m},{description:"Touch display, relay module, UPS HAT, expansion board for Raspberry Pi",link:"\u002Ftopic-272-156.html",title:k},{description:"Raspberry Pi 5 and 4B Starter Kit",link:"\u002Ftopic-272-140.html",title:"Raspberry Pi Kits"},{description:"Sensors compatible with Raspberry Pi, such as camera, ultrasonic sensor, etc.",link:"\u002Ftopic-272-36.html",title:l}],title:bb};aR[10]={description:a,link:a,submenu:[{description:a,link:"\u002Ftopic-279.html",title:g},{description:"Robot control board with motor driver",link:"\u002Ftopic-279-184.html",title:x},{description:"LiDAR, ToF laser range scanner, ultrasonic distance sensor, camera, DOF sensor",link:"\u002Ftopic-279-36.html",title:l},{description:"Motor, motor driver, digital servo, clutch servo, DC-DC converter",link:"\u002Ftopic-279-156.html",title:k},{description:"micro:bit programming robot platform, mobile robot platform, robotic arm",link:"\u002Ftopic-279-140.html",title:Y},{description:"micro:Maqueen Mechanic, rubber wheel, mecanum wheel, battery holder",link:"\u002Ftopic-279-66.html",title:m}],title:"Robotics"};aR[11]={description:a,link:a,submenu:[{description:a,link:"\u002Fcategory-36.html",title:"All Sensors"},{description:"Sensors with standard interface, plug-and-play, no soldering required, with color coded pin headers & cables",link:"\u002Ftopic-282.html",title:"Gravity Sensors"},{description:"High-quality and open-source breakout boards with small size and flexible wiring method",link:"\u002Ftopic-292.html",title:"Fermion Breakout"},{description:aU,link:aV,title:aW},{description:aX,link:aY,title:aZ},{description:"Solid state liDAR, laser range scanner, ToF LiDAR, single-point ranging LiDAR",link:"\u002Fcategory-313.html",title:"LiDAR"},{description:"Ultrasonic sensor, lightning distance sensor, infrared proximity sensor",link:a_,title:a$},{description:"Soil moisture sensor, DHT\u002FSHT\u002FAHT temperature & humidity sensor, BME688 environmental sensor",link:"\u002Fcategory-64.html",title:"Temperature & Humidity Sensor"},{description:"AI vision sensor, gesture sensor, fingerprint sensor, touch sensor",link:"\u002Fcategory-76.html",title:"Interactive Sensors"},{description:"Voice recognition sensor, text to speech, voice synthesizer module, voice recorder module",link:"\u002Fcategory-63.html",title:"Sound Sensors"},{description:"mmWave, human presence detection sensor, PIR sensor, vibration sensor, tilt sensor",link:"\u002Fcategory-204.html",title:"Motion Sensors"},{description:"IR positioning camera, ambient light sensor, 3D ToF sensor, camera module, RGB color sensor, QR code scanner",link:"\u002Fcategory-58.html",title:"Light & Imaging Sensors"},{description:"AC current sensor, digital wattmeter, LED current meter",link:"\u002Fcategory-201.html",title:"Current Sensors"},{description:"DOF sensor, triple axis accelerometer, 6-axis accelerometer, 9-axis sensor",link:"\u002Fcategory-65.html",title:"IMU Sensors"},{description:"Push button, LED button, magnetic switch, LED switch",link:"\u002Fcategory-205.html",title:"Switches & Buttons"},{description:"Heart rate monitor sensor, EMG\u002FECG\u002FPPG sensor",link:"\u002Fcategory-199.html",title:"e-Health Sensors"},{description:"Digital weight sensor",link:"\u002Fcategory-200.html",title:"Weight Sensors"},{description:"Triple axis magnetometer sensor, hall sensor",link:"\u002Fcategory-60.html",title:"Magnetic Sensors"},{description:"Barometric pressure sensor, differential pressure sensor, air pressure sensor",link:"\u002Fcategory-229.html",title:"Pressure Sensors"},{description:"Thin film pressure sensor, flexiforce pressure sensor",link:"\u002Fcategory-202.html",title:"Flex Sensors"},{description:"Rotary encoder, TT Motor encoder, 360 degree hall angle sensor",link:"\u002Fcategory-301.html",title:"Encoders"},{description:"USB GPS receiver compatible with Raspberry Pi \u002F LattePanda \u002F Jetson Nano",link:"\u002Fcategory-57.html",title:"GPS"},{description:"Analog slide position sensor, analog rotation potentiometer sensor",link:"\u002Fcategory-203.html",title:"Potentiometer"},{description:"9 PCS \u002F 27 PCS \u002F 37 PCS sensor set for Arduino and Raspberry Pi",link:"\u002Fcategory-227.html",title:"Sensor Set"},{description:"Geiger counter module, analog signal isolator, soil NPK measure sensor",link:"\u002Fcategory-230.html",title:X}],title:"Sensor"};aR[12]={description:a,link:a,submenu:[{description:"Arduino and micro:bit kits with detailed tutorials",link:"\u002Ftopic-280.html",title:be},{description:"Educational robot platform for micro:bit and micro:bit accessories",link:"\u002Ftopic-281.html",title:bd},{description:"micro:bit robots for hands-on STEM",link:"\u002Ftopic-319.html",title:"Maqueen"},{description:"Modularized electronic building blocks designed for young inventors and STEM educators",link:"\u002Ftopic-283.html",title:"Boson"},{description:"micro:bit, UNIHIKER",link:"\u002Ftopic-280-184.html",title:x},{description:"Huskylens, Lark weather station, sensor set for Arduino",link:"\u002Ftopic-280-36.html",title:l},{description:"micro:bit accessories, science data acquisition module",link:"\u002Ftopic-280-156.html",title:k},{description:"Arduino beginner kit, micro:bit educational programming robot kit",link:"\u002Ftopic-280-140.html",title:Y},{description:"micro:Maqueen mechanic, UNIHIKER silicone case",link:"\u002Ftopic-280-66.html",title:m}],title:be};bg.USD={symbol:"$",code:bf,name:"$USD",rate:j};bg.EUR={symbol:"€",code:"EUR",name:"EUR€",rate:.85254949};bg.GBP={symbol:"£",code:"GBP",name:"£GBP",rate:.74400586};return {layout:o,data:[{menu:{type:"3",now:{text:"FireBeetle 2 ESP32-E IoT Microcontroller",href:p},back:{text:"Go Back",href:_},content:[{desc:a,develop:a,id:$,modify:b,modifyTime:d,name:z,reference:c,shortTitle:z,subject:"dfr0654\u002Fdocs\u002F23250",tasks:[],title:z,wikiid:$,text:"1. Getting Started",href:"\u002Fdfr0654\u002Fdocs\u002F23250",docIndex:j,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:aa,modify:b,modifyTime:d,name:A,reference:c,shortTitle:A,subject:"dfr0654\u002Fdocs\u002F23251",tasks:[],title:A,wikiid:aa,text:"2. Example Code for Arduino-Blink a LED",href:"\u002Fdfr0654\u002Fdocs\u002F23251",docIndex:ab,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:ac,modify:b,modifyTime:d,name:h,reference:c,shortTitle:h,subject:"dfr0654\u002Fdocs\u002F23252",tasks:[],title:h,wikiid:ac,text:"3. Example Code for Arduino-GPIO",href:p,docIndex:ad,children:[],expand:b,active:q,class:f},{desc:a,develop:a,id:ae,modify:b,modifyTime:d,name:B,reference:c,shortTitle:B,subject:"dfr0654\u002Fdocs\u002F23253",tasks:[],title:B,wikiid:ae,text:"4. Example Code for Arduino-RGB LED",href:"\u002Fdfr0654\u002Fdocs\u002F23253",docIndex:4,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:af,modify:b,modifyTime:d,name:C,reference:c,shortTitle:C,subject:"dfr0654\u002Fdocs\u002F23254",tasks:[],title:C,wikiid:af,text:"5. Example Code for Arduino-Serial Port",href:"\u002Fdfr0654\u002Fdocs\u002F23254",docIndex:5,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:ag,modify:b,modifyTime:d,name:D,reference:c,shortTitle:D,subject:"dfr0654\u002Fdocs\u002F23257",tasks:[],title:D,wikiid:ag,text:"6. Example Code for Arduino-I2C Communication",href:"\u002Fdfr0654\u002Fdocs\u002F23257",docIndex:6,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:ah,modify:b,modifyTime:d,name:E,reference:c,shortTitle:E,subject:"dfr0654\u002Fdocs\u002F23258",tasks:[],title:E,wikiid:ah,text:"7. Example Code for Arduino-SPI Communication",href:"\u002Fdfr0654\u002Fdocs\u002F23258",docIndex:7,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:ai,modify:b,modifyTime:d,name:F,reference:c,shortTitle:F,subject:"dfr0654\u002Fdocs\u002F23255",tasks:[],title:F,wikiid:ai,text:"8. Example Code for Arduino-Capacitive Touch",href:"\u002Fdfr0654\u002Fdocs\u002F23255",docIndex:8,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:aj,modify:b,modifyTime:d,name:G,reference:c,shortTitle:G,subject:"dfr0654\u002Fdocs\u002F23256",tasks:[],title:G,wikiid:aj,text:"9. Example Code for Arduino-Interrupt",href:"\u002Fdfr0654\u002Fdocs\u002F23256",docIndex:9,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:ak,modify:b,modifyTime:d,name:H,reference:c,shortTitle:H,subject:"dfr0654\u002Fdocs\u002F23259",tasks:[],title:H,wikiid:ak,text:"10. Example Code for Arduino-GDI Display interface",href:"\u002Fdfr0654\u002Fdocs\u002F23259",docIndex:10,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:al,modify:b,modifyTime:d,name:I,reference:c,shortTitle:I,subject:"dfr0654\u002Fdocs\u002F23261",tasks:[],title:I,wikiid:al,text:"11. Example Code for Arduino-SD Card",href:"\u002Fdfr0654\u002Fdocs\u002F23261",docIndex:11,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:am,modify:b,modifyTime:d,name:J,reference:c,shortTitle:J,subject:"dfr0654\u002Fdocs\u002F23260",tasks:[],title:J,wikiid:am,text:"12. Example Code for Arduino-Deep-sleep Mode",href:"\u002Fdfr0654\u002Fdocs\u002F23260",docIndex:12,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:an,modify:b,modifyTime:d,name:K,reference:c,shortTitle:K,subject:"dfr0654\u002Fdocs\u002F23262",tasks:[],title:K,wikiid:an,text:"13. Example Code for Arduino-WiFi",href:"\u002Fdfr0654\u002Fdocs\u002F23262",docIndex:13,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:ao,modify:b,modifyTime:d,name:L,reference:c,shortTitle:L,subject:"dfr0654\u002Fdocs\u002F23263",tasks:[],title:L,wikiid:ao,text:"14. Example Code for Arduino-Bluetooth",href:"\u002Fdfr0654\u002Fdocs\u002F23263",docIndex:14,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:ap,modify:b,modifyTime:d,name:M,reference:c,shortTitle:M,subject:"dfr0654\u002Fdocs\u002F23264",tasks:[],title:M,wikiid:ap,text:"15. Example Code for Arduino-IFTTT",href:"\u002Fdfr0654\u002Fdocs\u002F23264",docIndex:15,children:[],expand:b,active:b,class:f},{desc:a,develop:a,id:aq,modify:b,modifyTime:d,name:r,reference:j,shortTitle:r,subject:"dfr0654\u002Fdocs\u002F23265",tasks:[],title:r,wikiid:aq,text:r,href:"\u002Fdfr0654\u002Fdocs\u002F23265",docIndex:c,children:[],expand:b,active:b,class:"reference"}]},wikiData:{content:"## 1. Digital  Write Pin\n\n### Hardware Preparation\n\n- [FireBeetle 2 ESP32-E](https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html) (SKU: DFR0654) ×1\n- [Gravity: Digital Blue LED Light Module](https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-492.html) (SKU: DFR0021-B) ×1\n- USB cable  ×1\n\n### Wiring Diagram \n![DFR0654-LED wiring diagram](https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002Fbb4c92046ae9116a608c96429e63587b.png \"DFR0654-LED wiring diagram\")\n\n### Sample Code\n\nWhen the digital pin outputs high, the LED turns on.\n\n```arduino\nint ledPin = D7; \u002F\u002FDefine LED pin \nvoid setup(){\n   pinMode(ledPin, OUTPUT); \n   digitalWrite(ledPin, HIGH);\n}\n\nvoid loop(){\n}\n```\n\n### Result\n\nWhen the program is uploaded, the blue LED lights up.\n\n## 2. Digital Read Pin \n\n### Hardware Preparation\n\n- [FireBeetle 2 ESP32-E](https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html) (SKU: DFR0654) ×1\n- [Gravity: Digital Yellow Push Button](https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-73.html) (SKU: DFR0029-Y) ×1\n- USB cable  ×1\n\n### Wiring Diagram \n\n![DFR0654-Button wiring diagram](https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002Fc598e6ad98e1d8d9819688800f0d81c5.png \"DFR0654-Button wiring diagram\")\n\n### Sample Code\n\nThe on-board LED lights up when the button is pressed, and turns off when released.\n\n```arduino\nint buttonPin = D7;   \u002F\u002FDefine button pin  \nint ledPin = D9;     \u002F\u002FDefine LED pin \nint buttonState = 0;  \u002F\u002FVariable for reading button statu\n\nvoid setup(){\n   pinMode(buttonPin, INPUT); \n   pinMode(ledPin, OUTPUT);\n}\n\nvoid loop(){\n   buttonState = digitalRead(buttonPin); \u002F\u002FRead the status of button value \n\n   if(buttonState == HIGH){    \u002F\u002FIf the button is pressed \n     digitalWrite(ledPin,HIGH);\n   } else{\n     digitalWrite(ledPin,LOW);\n   }\n}\n```\n\n### Results\n\nWhen the program is uploaded, press down the button connected to pin D7, the on-board LED turns on; Release, it goes off.\n\n## 3. Analog Read Pin\n\n### Hardware Preparation\n\n- [FireBeetle 2 ESP32-E](https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html) (SKU: DFR0654) ×1\n- [Gravity: Analog Rotation Potentiometer Sensor for Arduino - Rotation 300°](https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-87.html) (SKU: DFR0054) ×1\n- USB cable  ×1\n\n### Wiring Diagram \n\n![DFR0654-ADC wiring diagram](https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002F03a1bbe2a44a2014aad9885aa8b53661.png \"DFR0654-ADC wiring diagram\")\n\n### Other Preparation Work\n\n[Analog-to-Digital converters (ADC)](https:\u002F\u002Fwiki.analog.com\u002Funiversity\u002Fcourses\u002Felectronics\u002Ftext\u002Fchapter-20) translate analog signals, real world signals like temperature, pressure, voltage, current, distance, or light intensity, into a digital representation of that signal. This digital representation can then be processed, manipulated, computed, transmitted or stored. FireBeetle 2 ESP32-E has a 12-bit ADC with a max output of 4095.\n\n**Note: The ADC on ESP32 can only measure around 2.5V instead of 3.3V, as shown in the example below.**\n\n### Sample Code\n\nThe program below can be used to read the sensor module connected to the pin IO15\u002FA4, and then print out the real-time analog angle sensor readings and the detected voltage on serial  monitor.\n\n```arduino\nint sensorPin = A4;   \u002F\u002F  Define analog angle sensor pin\nint sensorValue = 0;\n\nvoid setup(){\n   pinMode(sensorPin, INPUT); \n   Serial.begin(9600);   \u002F\u002FInitialize serial port\n}\n\nvoid loop(){\n   sensorValue = analogRead(sensorPin);    \u002F\u002FRead the sensor value on analog pin A4           \n   Serial.printf(\"sensor value: %d\\n\", sensorValue);  \u002F\u002FPrint the read sensor value  \n   Serial.printf(\"voltage: %.3fV\\n\", sensorValue * 3.26 \u002F 4095);  \u002F\u002FPrint the detected voltage\n   delay(100);\n}\n```\n\n### Result\n\nOpen the serial monitor and you can see the current value from the angle sensor printed in it. When the angle sensor is rotated, the printed value changes accordingly. It can be observed that when the sensor value is 4095, the detected voltage is about 3.3V.\n\n![DFR0654-ADC result](https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002F1b2006573d0b97b3d8200755e7f72ab1.png \"DFR0654-ADC result\")\n\n## 4. PWM Output (Analog Write)\n\n### Hardware Preparation\n- [FireBeetle 2 ESP32-E](https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html) (SKU: DFR0654) ×1\n- USB cable  ×1\n\n### Other Preparation Work\n\nPWM (Pulse Width Modulation) is a very effective technique to control analog circuits using the digital output of MCU. It is widely used in many fields such as lighting control, motor speed control, measurement, communication, power control and conversion.\n\nThe PWM controller of ESP32 has 16 independent channels, which can be configured to generate PWM signals with different properties. All pins that can be used as outputs can serve as PWM pins (GPIO 34 to 39 cannot generate PWM).\n\nIn the Arduino IDE, PWM output is defined as analog output. When using Arduino for PWM LED dimming, you should follow the steps below:\n\n1. First, select a PWM channel. There are 16 channels from 0 to 15.\n\n2. Then, set the PWM signal frequency. For LEDs, a frequency of 5000 Hz is suitable.\n\n3. Set the duty cycle resolution of the signal, ranging from 1 to 16 bits. Here an 8-bit resolution is used. And we can use the value between 0 and 255 (2 to the power of 8) to control the LED brightness.\n\nThe sample code below will demonstrate how to drive the onboard LED using PWM to display a breathing light effect. No external hardware connection is required for this example.\n\n### Sample Code\n\nFunction: Drive the onboard LED using PWM to display a breathing light effect.\n\n```arduino\nconst int ledPin = D9; \u002F\u002FDefine LED Pin\nconst int freq = 5000;   \u002F\u002FSet PWM signal frequency\nconst int ledChannel = 0;   \u002F\u002FThere are 16 channels from 0 to 15, set to PWM channel 0\nconst int resolution = 8;    \u002F\u002FSet the duty cycle resolution of the signal, from 1 to 16 bits. Select 8-bit resolution here, ranging from 0 to 255\n\nvoid setup(){\n  ledcSetup(ledChannel,freq,resolution);\n  ledcAttachPin(ledPin,ledChannel);    \u002F\u002FSet the pin for outputting PWM signals and the channel for generating PWM signals\n\n}\n\nvoid loop(){\n  for(int dutyCycle = 0;dutyCycle \u003C= 255;dutyCycle++){\n    ledcWrite(ledChannel,dutyCycle);   \n    delay(15);\n  }\n  for(int dutyCycle = 255;dutyCycle \u003E= 0;dutyCycle--){\n    ledcWrite(ledChannel,dutyCycle);\n    delay(15);\n  }\n}\n```\n\n### Result\n\nAfter the program is uploaded successfully, the light intensity of the on-board green LED appears to rise and fall in a manner that resembles human breathing.\n",desc:"This article provides comprehensive example codes for Arduino GPIO usage, focusing on digital write\u002Fread, analog read, and PWM output with the FireBeetle 2 ESP32-E, enabling users to control LEDs and read sensor values.",modifyTime:d,ogDesc:N,ogTitle:O,reference:c,seoDesc:ar,seoKey:as,seoTitle:s,shortTitle:h,show:j,sku:"DFR0654",structuredDesc:at,subjectUrl:a,title:h,type:o,id:23252},subMenu:[{title:"1. Digital  Write Pin",tag:t,children:[{title:u,tag:e,children:[]},{title:P,tag:e,children:[]},{title:v,tag:e,children:[]},{title:Q,tag:e,children:[]}]},{title:"2. Digital Read Pin",tag:t,children:[{title:u,tag:e,children:[]},{title:P,tag:e,children:[]},{title:v,tag:e,children:[]},{title:"Results",tag:e,children:[]}]},{title:"3. Analog Read Pin",tag:t,children:[{title:u,tag:e,children:[]},{title:P,tag:e,children:[]},{title:au,tag:e,children:[]},{title:v,tag:e,children:[]},{title:Q,tag:e,children:[]}]},{title:"4. PWM Output (Analog Write)",tag:t,children:[{title:u,tag:e,children:[]},{title:au,tag:e,children:[]},{title:v,tag:e,children:[]},{title:Q,tag:e,children:[]}]}],htmlStr:"\u003Ch2\u003E1. Digital  Write Pin\u003C\u002Fh2\u003E\n\u003Ch3\u003EHardware Preparation\u003C\u002Fh3\u003E\n\u003Cul\u003E\n\u003Cli\u003E\u003Ca href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html\"\u003EFireBeetle 2 ESP32-E\u003C\u002Fa\u003E (SKU: DFR0654) ×1\u003C\u002Fli\u003E\n\u003Cli\u003E\u003Ca href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-492.html\"\u003EGravity: Digital Blue LED Light Module\u003C\u002Fa\u003E (SKU: DFR0021-B) ×1\u003C\u002Fli\u003E\n\u003Cli\u003EUSB cable  ×1\u003C\u002Fli\u003E\n\u003C\u002Ful\u003E\n\u003Ch3\u003EWiring Diagram\u003C\u002Fh3\u003E\n\u003Cp\u003E\u003Cimg src=\"https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002Fbb4c92046ae9116a608c96429e63587b_0x0.png.webp\" alt=\"DFR0654-LED wiring diagram\" title=\"DFR0654-LED wiring diagram\"\u003E\u003C\u002Fp\u003E\n\u003Ch3\u003ESample Code\u003C\u002Fh3\u003E\n\u003Cp\u003EWhen the digital pin outputs high, the LED turns on.\u003C\u002Fp\u003E\n\u003Cpre\u003E\u003Ccode class=\"language-arduino\"\u003Eint ledPin = D7; \u002F\u002FDefine LED pin \nvoid setup(){\n   pinMode(ledPin, OUTPUT); \n   digitalWrite(ledPin, HIGH);\n}\n\nvoid loop(){\n}\n\u003C\u002Fcode\u003E\u003C\u002Fpre\u003E\n\u003Ch3\u003EResult\u003C\u002Fh3\u003E\n\u003Cp\u003EWhen the program is uploaded, the blue LED lights up.\u003C\u002Fp\u003E\n\u003Ch2\u003E2. Digital Read Pin\u003C\u002Fh2\u003E\n\u003Ch3\u003EHardware Preparation\u003C\u002Fh3\u003E\n\u003Cul\u003E\n\u003Cli\u003E\u003Ca href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html\"\u003EFireBeetle 2 ESP32-E\u003C\u002Fa\u003E (SKU: DFR0654) ×1\u003C\u002Fli\u003E\n\u003Cli\u003E\u003Ca href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-73.html\"\u003EGravity: Digital Yellow Push Button\u003C\u002Fa\u003E (SKU: DFR0029-Y) ×1\u003C\u002Fli\u003E\n\u003Cli\u003EUSB cable  ×1\u003C\u002Fli\u003E\n\u003C\u002Ful\u003E\n\u003Ch3\u003EWiring Diagram\u003C\u002Fh3\u003E\n\u003Cp\u003E\u003Cimg src=\"https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002Fc598e6ad98e1d8d9819688800f0d81c5_0x0.png.webp\" alt=\"DFR0654-Button wiring diagram\" title=\"DFR0654-Button wiring diagram\"\u003E\u003C\u002Fp\u003E\n\u003Ch3\u003ESample Code\u003C\u002Fh3\u003E\n\u003Cp\u003EThe on-board LED lights up when the button is pressed, and turns off when released.\u003C\u002Fp\u003E\n\u003Cpre\u003E\u003Ccode class=\"language-arduino\"\u003Eint buttonPin = D7;   \u002F\u002FDefine button pin  \nint ledPin = D9;     \u002F\u002FDefine LED pin \nint buttonState = 0;  \u002F\u002FVariable for reading button statu\n\nvoid setup(){\n   pinMode(buttonPin, INPUT); \n   pinMode(ledPin, OUTPUT);\n}\n\nvoid loop(){\n   buttonState = digitalRead(buttonPin); \u002F\u002FRead the status of button value \n\n   if(buttonState == HIGH){    \u002F\u002FIf the button is pressed \n     digitalWrite(ledPin,HIGH);\n   } else{\n     digitalWrite(ledPin,LOW);\n   }\n}\n\u003C\u002Fcode\u003E\u003C\u002Fpre\u003E\n\u003Ch3\u003EResults\u003C\u002Fh3\u003E\n\u003Cp\u003EWhen the program is uploaded, press down the button connected to pin D7, the on-board LED turns on; Release, it goes off.\u003C\u002Fp\u003E\n\u003Ch2\u003E3. Analog Read Pin\u003C\u002Fh2\u003E\n\u003Ch3\u003EHardware Preparation\u003C\u002Fh3\u003E\n\u003Cul\u003E\n\u003Cli\u003E\u003Ca href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html\"\u003EFireBeetle 2 ESP32-E\u003C\u002Fa\u003E (SKU: DFR0654) ×1\u003C\u002Fli\u003E\n\u003Cli\u003E\u003Ca href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-87.html\"\u003EGravity: Analog Rotation Potentiometer Sensor for Arduino - Rotation 300°\u003C\u002Fa\u003E (SKU: DFR0054) ×1\u003C\u002Fli\u003E\n\u003Cli\u003EUSB cable  ×1\u003C\u002Fli\u003E\n\u003C\u002Ful\u003E\n\u003Ch3\u003EWiring Diagram\u003C\u002Fh3\u003E\n\u003Cp\u003E\u003Cimg src=\"https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002F03a1bbe2a44a2014aad9885aa8b53661_0x0.png.webp\" alt=\"DFR0654-ADC wiring diagram\" title=\"DFR0654-ADC wiring diagram\"\u003E\u003C\u002Fp\u003E\n\u003Ch3\u003EOther Preparation Work\u003C\u002Fh3\u003E\n\u003Cp\u003E\u003Ca href=\"https:\u002F\u002Fwiki.analog.com\u002Funiversity\u002Fcourses\u002Felectronics\u002Ftext\u002Fchapter-20\"\u003EAnalog-to-Digital converters (ADC)\u003C\u002Fa\u003E translate analog signals, real world signals like temperature, pressure, voltage, current, distance, or light intensity, into a digital representation of that signal. This digital representation can then be processed, manipulated, computed, transmitted or stored. FireBeetle 2 ESP32-E has a 12-bit ADC with a max output of 4095.\u003C\u002Fp\u003E\n\u003Cp\u003E\u003Cstrong\u003ENote: The ADC on ESP32 can only measure around 2.5V instead of 3.3V, as shown in the example below.\u003C\u002Fstrong\u003E\u003C\u002Fp\u003E\n\u003Ch3\u003ESample Code\u003C\u002Fh3\u003E\n\u003Cp\u003EThe program below can be used to read the sensor module connected to the pin IO15\u002FA4, and then print out the real-time analog angle sensor readings and the detected voltage on serial  monitor.\u003C\u002Fp\u003E\n\u003Cpre\u003E\u003Ccode class=\"language-arduino\"\u003Eint sensorPin = A4;   \u002F\u002F  Define analog angle sensor pin\nint sensorValue = 0;\n\nvoid setup(){\n   pinMode(sensorPin, INPUT); \n   Serial.begin(9600);   \u002F\u002FInitialize serial port\n}\n\nvoid loop(){\n   sensorValue = analogRead(sensorPin);    \u002F\u002FRead the sensor value on analog pin A4           \n   Serial.printf(&quot;sensor value: %d\\n&quot;, sensorValue);  \u002F\u002FPrint the read sensor value  \n   Serial.printf(&quot;voltage: %.3fV\\n&quot;, sensorValue * 3.26 \u002F 4095);  \u002F\u002FPrint the detected voltage\n   delay(100);\n}\n\u003C\u002Fcode\u003E\u003C\u002Fpre\u003E\n\u003Ch3\u003EResult\u003C\u002Fh3\u003E\n\u003Cp\u003EOpen the serial monitor and you can see the current value from the angle sensor printed in it. When the angle sensor is rotated, the printed value changes accordingly. It can be observed that when the sensor value is 4095, the detected voltage is about 3.3V.\u003C\u002Fp\u003E\n\u003Cp\u003E\u003Cimg src=\"https:\u002F\u002Fdfimg.dfrobot.com\u002Fnobody\u002Fwiki\u002F1b2006573d0b97b3d8200755e7f72ab1_0x0.png.webp\" alt=\"DFR0654-ADC result\" title=\"DFR0654-ADC result\"\u003E\u003C\u002Fp\u003E\n\u003Ch2\u003E4. PWM Output (Analog Write)\u003C\u002Fh2\u003E\n\u003Ch3\u003EHardware Preparation\u003C\u002Fh3\u003E\n\u003Cul\u003E\n\u003Cli\u003E\u003Ca href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2195.html\"\u003EFireBeetle 2 ESP32-E\u003C\u002Fa\u003E (SKU: DFR0654) ×1\u003C\u002Fli\u003E\n\u003Cli\u003EUSB cable  ×1\u003C\u002Fli\u003E\n\u003C\u002Ful\u003E\n\u003Ch3\u003EOther Preparation Work\u003C\u002Fh3\u003E\n\u003Cp\u003EPWM (Pulse Width Modulation) is a very effective technique to control analog circuits using the digital output of MCU. It is widely used in many fields such as lighting control, motor speed control, measurement, communication, power control and conversion.\u003C\u002Fp\u003E\n\u003Cp\u003EThe PWM controller of ESP32 has 16 independent channels, which can be configured to generate PWM signals with different properties. All pins that can be used as outputs can serve as PWM pins (GPIO 34 to 39 cannot generate PWM).\u003C\u002Fp\u003E\n\u003Cp\u003EIn the Arduino IDE, PWM output is defined as analog output. When using Arduino for PWM LED dimming, you should follow the steps below:\u003C\u002Fp\u003E\n\u003Col\u003E\n\u003Cli\u003E\n\u003Cp\u003EFirst, select a PWM channel. There are 16 channels from 0 to 15.\u003C\u002Fp\u003E\n\u003C\u002Fli\u003E\n\u003Cli\u003E\n\u003Cp\u003EThen, set the PWM signal frequency. For LEDs, a frequency of 5000 Hz is suitable.\u003C\u002Fp\u003E\n\u003C\u002Fli\u003E\n\u003Cli\u003E\n\u003Cp\u003ESet the duty cycle resolution of the signal, ranging from 1 to 16 bits. Here an 8-bit resolution is used. And we can use the value between 0 and 255 (2 to the power of 8) to control the LED brightness.\u003C\u002Fp\u003E\n\u003C\u002Fli\u003E\n\u003C\u002Fol\u003E\n\u003Cp\u003EThe sample code below will demonstrate how to drive the onboard LED using PWM to display a breathing light effect. No external hardware connection is required for this example.\u003C\u002Fp\u003E\n\u003Ch3\u003ESample Code\u003C\u002Fh3\u003E\n\u003Cp\u003EFunction: Drive the onboard LED using PWM to display a breathing light effect.\u003C\u002Fp\u003E\n\u003Cpre\u003E\u003Ccode class=\"language-arduino\"\u003Econst int ledPin = D9; \u002F\u002FDefine LED Pin\nconst int freq = 5000;   \u002F\u002FSet PWM signal frequency\nconst int ledChannel = 0;   \u002F\u002FThere are 16 channels from 0 to 15, set to PWM channel 0\nconst int resolution = 8;    \u002F\u002FSet the duty cycle resolution of the signal, from 1 to 16 bits. Select 8-bit resolution here, ranging from 0 to 255\n\nvoid setup(){\n  ledcSetup(ledChannel,freq,resolution);\n  ledcAttachPin(ledPin,ledChannel);    \u002F\u002FSet the pin for outputting PWM signals and the channel for generating PWM signals\n\n}\n\nvoid loop(){\n  for(int dutyCycle = 0;dutyCycle &lt;= 255;dutyCycle++){\n    ledcWrite(ledChannel,dutyCycle);   \n    delay(15);\n  }\n  for(int dutyCycle = 255;dutyCycle &gt;= 0;dutyCycle--){\n    ledcWrite(ledChannel,dutyCycle);\n    delay(15);\n  }\n}\n\u003C\u002Fcode\u003E\u003C\u002Fpre\u003E\n\u003Ch3\u003EResult\u003C\u002Fh3\u003E\n\u003Cp\u003EAfter the program is uploaded successfully, the light intensity of the on-board green LED appears to rise and fall in a manner that resembles human breathing.\u003C\u002Fp\u003E\n",viewType:w,breadcrumbs:[{href:av,text:o},{href:_,text:aw},{href:p,text:h}],seo_tdk:{title:s,description:ar,keywords:as},seo_schemas:[{type:R,json:{"@context":S,"@type":"SoftwareSourceCode",name:s,description:at,sampleType:"int ledPin = D7; \u002F\u002FDefine LED pin \nvoid setup(){\n   pinMode(ledPin, OUTPUT); \n   digitalWrite(ledPin, HIGH);\n}\n\nvoid loop(){\n}\n",author:{"@type":"Person","@id":T},publisher:{"@type":U,"@id":T}}},{type:R,json:{"@context":S,"@type":"BreadcrumbList",itemListElement:[{"@type":V,position:j,name:o,item:ax},{"@type":V,position:ab,name:aw,item:"https:\u002F\u002Fwiki.dfrobot.com\u002Fdfr0654\u002F"},{"@type":V,position:ad,name:h,item:ay}]}},{type:R,json:{"@context":S,"@type":"ImageObject",contentUrl:W,creditText:az,creator:{"@type":U,name:az},publisher:{"@type":U,"@id":T}}}],seo_meta_medias:[{hid:aA,property:aA,content:"en_US"},{hid:aB,property:aB,content:"website"},{hid:aC,property:aC,content:O},{hid:aD,property:aD,content:N},{hid:aE,property:aE,content:ay},{hid:aF,property:aF,content:s},{hid:aG,property:aG,content:W},{hid:aH,property:aH,content:aI},{hid:aJ,property:aJ,content:"summary_large_image"},{hid:aK,property:aK,content:aL},{hid:aM,property:aM,content:aL},{hid:aN,property:aN,content:O},{hid:aO,property:aO,content:N},{hid:aP,property:aP,content:W},{hid:aQ,property:aQ,content:aI}]}],fetch:{"0":{},"data-v-d71158b6:0":{jq:a,md5:{},tools:{},backName:"menu-back",pageType:a,viewType:w,deviceCss:[{rel:"stylesheet",href:"\u002Flibs\u002Fswiper\u002Fswiper-bundle.min.css"}],deviceJs:[{src:"\u002Fdfrobotshop\u002Flib\u002Fdfpclib.js",ssr:q}],showPL:b,userMenu:b,user:{identity:"unset"},storeMenu:aR,storeActive:j,login:b,userType:"guest",cartNum:c,searchkey:a,currency:bf,currencyList:bg,showFastCategory:b,categories:[],timer_fastSearch:i,fastSearch:{loadingProduct:b,products:[],loadingBlog:b,blogs:[],loadingWiki:b,wikis:[]},navList:[{name:"Community",url:"https:\u002F\u002Fcommunity.dfrobot.com\u002F",target:n},{name:"Forum",url:"https:\u002F\u002Fwww.dfrobot.com\u002Fforum\u002F",target:n},{name:"Wiki",url:ax,target:n},{name:"Blog",url:"https:\u002F\u002Fwww.dfrobot.com\u002Fblog",target:n},{name:"Learn",url:"https:\u002F\u002Flearn.dfrobot.com\u002F",target:n}],items:[{title:Z},{title:Z},{title:Z},{title:"Click Me 2"}],menuStatus:a,mColor:"#000000",mtColor:"#ffffff",mNavShow:b,enableWarehouse:q},"data-v-0d8b5951:0":{jq:{},md5:{},tools:{},backName:"popbox-back",data:{name:a,size:a,url:a},tipsMsg:a,errorMsg:a,errorMsgBackFun:i,pop:{show:b,icon:a,title:a,subtitle:a,desc:a,yesText:a,noText:a,yesFun:i,noFun:i,autoClose:c},viewType:w}},error:i,state:{authUser:i,setting:{learn:[{link:"https:\u002F\u002Flearn.dfrobot.com\u002Fcourse-691.html",thumb:["https:\u002F\u002Fdfimg.dfrobot.com\u002F5caaf47fe9f1335a9d6ad8d6\u002Fdfapi\u002F6c9280468a6858d1d874c304f1f7ecc6.jpg"],title:"Get Started with Arduino: A Step-by-Step Tutorial"},{link:"https:\u002F\u002Flearn.dfrobot.com\u002Fcourse-668.html",thumb:["https:\u002F\u002Fdfimg.dfrobot.com\u002F5caaf47fe9f1335a9d6ad8d6\u002Fdfapi\u002F57e329cb6a8573e51a855f392fe747c2.jpg"],title:"Python Programming on Hardware for Beginners"}],seoDesc:"DFRobot provides open-source hardware, kits and robotics dedicated to bringing innovative electronics.",seoKeyword:"Arduino,LattePanda,Raspberry Pi,micro:bit,Gravity,Robotics,Internet of Things - IoT,FireBeetle,Artificial Intelligence,Fermion,STEM Education,Boson,esp8266 &amp; esp32,jeston nano",seoTitle:"DFRobot Open-Source Hardware Electronics and Kits",siteDesc:a,topBanner:{"USA-1":{bannerBg:[],bannerImg:[],bannerLink:a,bannerMobile:[],bannerTitle:a,begin:"2025-07-02 00:00:00",begin2:y,end:"2025-07-15 00:00:00",end2:y,message:"\u003Cp\u003EAnniversary Sale! 30% Off First Item + Free Shipping ($50+) \u003Ca target=\"_blank\" rel=\"noopener noreferrer\" href=\"https:\u002F\u002Fwww.dfrobot.com\u002F15th_anniversary\"\u003E➡️ Shop Now\u003C\u002Fa\u003E\u003C\u002Fp\u003E",onlyTest:b,warehouse:"USA-1"},GLOBAL:{bannerBg:[],bannerImg:[],bannerLink:a,bannerMobile:[],bannerTitle:a,begin:"2025-09-07 00:00:00",begin2:y,end:"2025-11-19 00:00:00",end2:y,message:"\u003Cp\u003EMAJOR LAUNCH: HUSKYLENS 2 6 TOPS LLM MCP AI Vision Sensor is now available. \u003Ca target=\"_blank\" rel=\"noopener noreferrer\" href=\"https:\u002F\u002Fwww.dfrobot.com\u002Fproduct-2995.html?marketing=690360ffb0f6d\"\u003E\u003Cstrong\u003EBuy Now →\u003C\u002Fstrong\u003E\u003C\u002Fa\u003E\u003C\u002Fp\u003E",onlyTest:b,warehouse:"GLOBAL"}},store:aR},currencys:bg,viewtype:w},serverRendered:q,routePath:p,config:{_app:{basePath:av,assetsPath:"\u002F_nuxt\u002F",cdnURL:i}}}}("",false,0,"2026-01-31 00:00:00","h3","doc","All","Example Code for Arduino-GPIO",null,1,"Modules","Sensors","Prototyping & Accessories","_blank","wiki","\u002Fdfr0654\u002Fdocs\u002F23252",true,"Reference","FireBeetle 2 ESP32-E Example Code for Arduino-GPIO | DFRobot Wiki","h2","Hardware Preparation","Sample Code","pc","Development Boards","NaN-NaN-NaN NaN:NaN:NaN","Getting Started","Example Code for Arduino-Blink a LED","Example Code for Arduino-RGB LED","Example Code for Arduino-Serial Port","Example Code for Arduino-I2C Communication","Example Code for Arduino-SPI Communication","Example Code for Arduino-Capacitive Touch","Example Code for Arduino-Interrupt","Example Code for Arduino-GDI Display interface","Example Code for Arduino-SD Card","Example Code for Arduino-Deep-sleep Mode","Example Code for Arduino-WiFi","Example Code for Arduino-Bluetooth","Example Code for Arduino-IFTTT","Explore Arduino example codes for FireBeetle 2 ESP32-E, showcasing digital and analog pin interactions with LEDs, buttons, and potentiometers. Perfect for developers and IoT enthusiasts!","FireBeetle 2 ESP32-E Example Code: Master Arduino-GPIO ?","Wiring Diagram","Result","application\u002Fld+json","https:\u002F\u002Fschema.org","https:\u002F\u002Fwiki.dfrobot.com\u002F#organization","Organization","ListItem","https:\u002F\u002Fwiki.dfrobot.com\u002Fimages\u002Fdfrobot_wiki_socialmedia_og_image.png","Others","Kits","Click Me","\u002Fdfr0654\u002F","23250","23251",2,"23252",3,"23253","23254","23257","23258","23255","23256","23259","23261","23260","23262","23263","23264","23265","Download and run Arduino example code for FireBeetle 2 ESP32-E. This example code shows you how to use digital write, digital read, analog read, and PWM output functionalities.","FireBeetle 2 ESP32-E, Arduino, GPIO, example code, digital write, digital read, analog read, PWM output, LED, button, potentiometer, ESP32","For developers and IoT enthusiasts, this page provides Arduino example code for FireBeetle 2 ESP32-E. Learn to use digital write, read, analog read, and PWM output.","Other Preparation Work","\u002F","dfr0654","https:\u002F\u002Fwiki.dfrobot.com\u002F","https:\u002F\u002Fwiki.dfrobot.com\u002Fdfr0654\u002Fdocs\u002F23252","DFRobot","og:locale","og:type","og:title","og:description","og:url","og:site_name","og:image","og:image:alt","dfrobot_wiki_img","twitter:card","twitter:site","@wiki","twitter:creator","twitter:title","twitter:description","twitter:image","twitter:image:alt",Array(13),"ESP32-P4, ESP32-C5, ESP32-C6, ESP32-S3, ESP8266 IoT microcontrollers","\u002Ftopic-316.html","pH Sensor, EC sensor, TDS sensor, DO sensor, turbidity sensor, ORP sensor, liquid level sensor","\u002Fcategory-68.html","Liquid Sensors","O2 sensor, CO sensor, CO2 sensor, air quality sensor, weather station, wind speed sensor","\u002Fcategory-85.html","Air Sensors","\u002Fcategory-55.html","Range & Distance Sensors","Raspberry Pi 5, Raspberry Pi 4B, Raspberry Pi Pico 2 W, Raspberry Pi CM4, Beetle RP2040","Raspberry Pi","ESP32-C6, ESP32-S3, ESP8266 IoT microcontrollers","micro:bit","STEM Education","USD",{}));</script><script src="/_nuxt/9e86fd7.js" defer></script><script src="/_nuxt/197a583.js" defer></script><script src="/_nuxt/37302d6.js" defer></script><script src="/_nuxt/778c53f.js" defer></script><script src="/_nuxt/4aefe03.js" defer></script><script src="/_nuxt/6a345f2.js" defer></script>
+  </body>
+</html>
