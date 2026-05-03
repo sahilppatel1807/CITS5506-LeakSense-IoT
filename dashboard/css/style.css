@@ -1,0 +1,199 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.topbar__left  { display: flex; flex-direction: column; gap: 2px; }
+.topbar__right { display: flex; align-items: center; gap: 12px; }
+.topbar__title { font-size: 16px; font-weight: 600; color: #111827; }
+.topbar__sub   { font-size: 12px; color: #6b7280; }
+.topbar__sync  { font-size: 12px; color: #9ca3af; }
+
+/* ── Status badge ─────────────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.3s, color 0.3s;
+}
+.status-badge::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* state colours */
+.status-badge.safe    { background: #d1fae5; color: #065f46; }
+.status-badge.warning { background: #fef3c7; color: #92400e; }
+.status-badge.danger  { background: #fee2e2; color: #991b1b; }
+
+/* ── State notification bar ───────────────────────────────────────────────── */
+.state-bar {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  transition: background 0.3s, color 0.3s;
+}
+.state-bar.safe    { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.state-bar.warning { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.state-bar.danger  { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+/* ── Card ─────────────────────────────────────────────────────────────────── */
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+}
+.card__title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Metric cards ─────────────────────────────────────────────────────────── */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+.metric-card__label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+.metric-card__value { font-size: 24px; font-weight: 500; color: #111827; }
+.metric-card__sub   { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+
+/* ── Main grid ────────────────────────────────────────────────────────────── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 12px;
+  align-items: start;
+}
+
+/* ── Chart card ───────────────────────────────────────────────────────────── */
+.chart-card canvas {
+  width: 100% !important;
+  height: 200px !important;
+}
+
+/* ── Simulator ────────────────────────────────────────────────────────────── */
+.simulator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f3f4f6;
+}
+.simulator__label  { font-size: 12px; color: #6b7280; white-space: nowrap; }
+.simulator__slider { flex: 1; accent-color: #3b82f6; }
+.simulator__val    { font-size: 12px; font-weight: 500; color: #111827; min-width: 64px; text-align: right; }
+.simulator__note   { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+
+/* ── Right column ─────────────────────────────────────────────────────────── */
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Device list ──────────────────────────────────────────────────────────── */
+.device-list { display: flex; flex-direction: column; }
+
+.device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.device-row--last { border-bottom: none; }
+.device-row__name { font-size: 13px; color: #111827; }
+.device-row__sub  { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+
+/* ── Pill ─────────────────────────────────────────────────────────────────── */
+.pill {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #6b7280;
+  transition: background 0.2s, color 0.2s;
+}
+.pill--on {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* ── Alert log ────────────────────────────────────────────────────────────── */
+.alert-card  { flex: 1; }
+.alert-log   { max-height: 220px; overflow-y: auto; }
+.alert-log__empty { font-size: 12px; color: #9ca3af; }
+
+.alert-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.alert-row:last-child { border-bottom: none; }
+.alert-row__time  { font-size: 11px; color: #9ca3af; white-space: nowrap; min-width: 60px; margin-top: 1px; }
+.alert-row__msg   { font-size: 12px; color: #111827; flex: 1; }
+
+.alert-pill {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.alert-pill--warning { background: #fef3c7; color: #92400e; }
+.alert-pill--danger  { background: #fee2e2; color: #991b1b; }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .metrics    { grid-template-columns: repeat(2, 1fr); }
+  .main-grid  { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .metrics { grid-template-columns: 1fr; }
+}
