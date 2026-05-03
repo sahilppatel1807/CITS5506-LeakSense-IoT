@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeakSense — LPG Gas Detection Dashboard</title>
+
+  <!-- Chart.js from CDN — no install needed -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Firebase from CDN — uncomment when Sohaib has Firebase ready -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script> -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script> -->
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+    <header class="topbar">
+      <div class="topbar__left">
+        <span class="topbar__title">LeakSense</span>
+        <span class="topbar__sub">Group 27 · Smart LPG Gas Detection System</span>
+      </div>
+      <div class="topbar__right">
+        <span class="topbar__sync" id="lastSync">Last sync: —</span>
+        <span class="status-badge" id="statusBadge">Safe</span>
+      </div>
+    </header>
+
+    <!-- ── State notification bar ─────────────────────────────────────────── -->
+    <div class="state-bar" id="stateBar">
+      System operating normally. Gas levels within safe range.
+    </div>
+
+    <!-- ── Metric cards ───────────────────────────────────────────────────── -->
+    <section class="metrics">
+      <div class="card metric-card">
+        <p class="metric-card__label">Gas level (ppm)</p>
+        <p class="metric-card__value" id="ppmVal">— ppm</p>
+        <p class="metric-card__sub" id="ppmSub">LPG concentration</p>
+      </div>
+      <div class="card metric-card">
+        <p class="metric-card__label">Temperature</p>
+        <p class="metric-card__value" id="tempVal">—°C</p>
+        <p class="metric-card__sub">BME280 reading</p>
+      </div>
+      <div class="card metric-card">
+        <p class="metric-card__label">Humidity</p>
+        <p class="metric-card__value" id="humVal">—%</p>
+        <p class="metric-card__sub">BME280 reading</p>
+      </div>
+      <div class="card metric-card">
+        <p class="metric-card__label">Alerts today</p>
+        <p class="metric-card__value" id="alertCount">0</p>
+        <p class="metric-card__sub">Warning + Danger events</p>
+      </div>
+    </section>
+
+    <!-- ── Main grid ──────────────────────────────────────────────────────── -->
+    <div class="main-grid">
+
+      <!-- Left: chart + simulator -->
+      <div class="card chart-card">
+        <p class="card__title">Gas concentration — last 60 readings</p>
+        <canvas id="trendChart"></canvas>
+
+        <!-- Simulator slider — remove this block when Firebase is connected -->
+        <div class="simulator" id="simulator">
+          <label class="simulator__label">Simulate ppm:</label>
+          <input
+            type="range"
+            id="simSlider"
+            class="simulator__slider"
+            min="0" max="700" step="1" value="120"
+          />
+          <span class="simulator__val" id="simVal">120 ppm</span>
+        </div>
+        <p class="simulator__note">Mock data only — remove slider when Firebase is connected</p>
+      </div>
+
+      <!-- Right: device states + alert log -->
+      <div class="right-col">
+
+        <!-- Device states -->
+        <div class="card">
+          <p class="card__title">Device states</p>
+          <div class="device-list">
+            <div class="device-row">
+              <div>
+                <p class="device-row__name">Exhaust fan</p>
+                <p class="device-row__sub">Delta 5V 40mm via relay</p>
+              </div>
+              <span class="pill" id="fanState">off</span>
+            </div>
+            <div class="device-row">
+              <div>
+                <p class="device-row__name">Buzzer</p>
+                <p class="device-row__sub">Gravity digital module</p>
+              </div>
+              <span class="pill" id="buzzerState">off</span>
+            </div>
+            <div class="device-row">
+              <div>
+                <p class="device-row__name">Green LED</p>
+                <p class="device-row__sub">Safe indicator</p>
+              </div>
+              <span class="pill pill--on" id="greenLed">on</span>
+            </div>
+            <div class="device-row">
+              <div>
+                <p class="device-row__name">Red LED</p>
+                <p class="device-row__sub">Warning / Danger</p>
+              </div>
+              <span class="pill" id="redLed">off</span>
+            </div>
+            <div class="device-row device-row--last">
+              <div>
+                <p class="device-row__name">Cloud sync</p>
+                <p class="device-row__sub">Firebase · every 5s</p>
+              </div>
+              <span class="pill pill--on" id="cloudSync">live</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert log -->
+        <div class="card alert-card">
+          <p class="card__title">Alert log</p>
+          <div class="alert-log" id="alertLog">
+            <p class="alert-log__empty">No alerts yet — system safe.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /.app -->
+
+  <!-- JS files — order matters -->
+  <script src="js/mock.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/dashboard.js"></script>
+  <!-- When Firebase ready, also add: -->
+  <!-- <script src="js/firebase.js"></script> -->
+
+</body>
+</html>
