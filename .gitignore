@@ -1,0 +1,17 @@
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+# No node_modules here since we use plain HTML/CSS/JS
+# but just in case anyone adds npm later
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.env
+
+# ── Firmware ──────────────────────────────────────────────────────────────────
+# NEVER commit credentials - each person creates their own locally
+firmware/src/secrets.h
+firmware/.pio/
+firmware/.vscode/
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
