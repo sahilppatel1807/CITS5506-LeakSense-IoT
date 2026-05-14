@@ -9,12 +9,19 @@ constexpr uint8_t kOledSdaPin = 18;
 constexpr uint8_t kOledSclPin = 23;
 constexpr uint8_t kBmeSdaPin = 22;
 constexpr uint8_t kBmeSclPin = 21;
+constexpr uint8_t kRelayPin = 25;
+constexpr int kMicsAnalogPin = 36;
 constexpr uint8_t kScreenWidth = 128;
 constexpr uint8_t kScreenHeight = 64;
 constexpr uint8_t kOledAddresses[] = {0x3C, 0x3D};
 constexpr uint8_t kBmeAddresses[] = {0x76, 0x77};
-constexpr unsigned long kBlinkIntervalMs = 1000;
+constexpr uint8_t kMicsSamplesPerRead = 32;
+constexpr unsigned long kBlinkIntervalMs = 500;
 constexpr unsigned long kSensorReadIntervalMs = 2000;
+constexpr unsigned long kMicsBaselineDurationMs = 10000;
+constexpr float kMicsGasDeltaThresholdV = 0.25f;
+constexpr float kMicsGasRatioThreshold = 1.40f;
+constexpr bool kRelayActiveLow = true;
 
 TwoWire gOledWire = TwoWire(0);
 TwoWire gBmeWire = TwoWire(1);
@@ -25,7 +32,18 @@ bool gDisplayReady = false;
 bool gBmeReady = false;
 uint8_t gDisplayAddress = 0;
 uint8_t gBmeAddress = 0;
+float gMicsBaselineVoltage = 0.0f;
+bool gMicsBaselineReady = false;
+bool gLedOn = false;
+unsigned long gStartMs = 0;
+unsigned long gLastBlinkMs = 0;
 unsigned long gLastSensorReadMs = 0;
+
+void setRelayAlarm(bool enabled) {
+  const uint8_t activeState = kRelayActiveLow ? LOW : HIGH;
+  const uint8_t inactiveState = kRelayActiveLow ? HIGH : LOW;
+  digitalWrite(kRelayPin, enabled ? activeState : inactiveState);
+}
 
 void scanI2CBus(TwoWire& bus, const char* label) {
   Serial.printf("Scanning %s I2C bus...\r\n", label);
@@ -57,22 +75,78 @@ bool initBme() {
   return false;
 }
 
-void drawStatusScreen(float temperatureC, float humidityPct, float pressureHpa) {
+float readMicsVoltage() {
+  uint32_t total = 0;
+  for (uint8_t i = 0; i < kMicsSamplesPerRead; ++i) {
+    total += analogRead(kMicsAnalogPin);
+    delay(2);
+  }
+
+  const float raw = total / static_cast<float>(kMicsSamplesPerRead);
+  return raw * 3.3f / 4095.0f;
+}
+
+void updateMicsBaseline(float voltage) {
+  if (gMicsBaselineReady) {
+    return;
+  }
+
+  if (gMicsBaselineVoltage <= 0.0f) {
+    gMicsBaselineVoltage = voltage;
+  } else {
+    gMicsBaselineVoltage = (gMicsBaselineVoltage * 0.85f) + (voltage * 0.15f);
+  }
+
+  if (millis() - gStartMs >= kMicsBaselineDurationMs) {
+    gMicsBaselineReady = true;
+    Serial.printf("MiCS-5524 baseline ready: %.3f V\r\n", gMicsBaselineVoltage);
+  }
+}
+
+bool isMicsGasDetected(float voltage) {
+  if (!gMicsBaselineReady || gMicsBaselineVoltage <= 0.01f) {
+    return false;
+  }
+
+  const float delta = voltage - gMicsBaselineVoltage;
+  const float ratio = voltage / gMicsBaselineVoltage;
+  return delta > kMicsGasDeltaThresholdV || ratio > kMicsGasRatioThreshold;
+}
+
+void drawStatusScreen(float temperatureC,
+                      float humidityPct,
+                      float pressureHpa,
+                      int micsRaw,
+                      float micsVoltage,
+                      bool gasDetected) {
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println("PiicoDev Test");
-  display.printf("OLED: 0x%02X\r\n", gDisplayAddress);
+  display.println("LeakSense Test");
 
   if (gBmeReady) {
-    display.printf("BME:  0x%02X\r\n", gBmeAddress);
     display.printf("T: %.1f C\r\n", temperatureC);
     display.printf("H: %.1f %%\r\n", humidityPct);
     display.printf("P: %.1f hPa\r\n", pressureHpa);
   } else {
     display.println("BME280 not found");
-    display.printf("SDA:%u SCL:%u\r\n", kBmeSdaPin, kBmeSclPin);
+    display.printf("BME SDA:%u SCL:%u\r\n", kBmeSdaPin, kBmeSclPin);
+  }
+
+  display.printf("MiCS raw: %d\r\n", micsRaw);
+  display.printf("MiCS V: %.3f\r\n", micsVoltage);
+
+  if (gMicsBaselineReady) {
+    const float ratio = gMicsBaselineVoltage > 0.01f ? micsVoltage / gMicsBaselineVoltage : 0.0f;
+    display.printf("Base: %.3f R:%.2f\r\n", gMicsBaselineVoltage, ratio);
+    display.printf("Gas: %s Alarm:%s\r\n", gasDetected ? "YES" : "no", gasDetected ? "ON" : "off");
+  } else {
+    const unsigned long elapsedMs = millis() - gStartMs;
+    const unsigned long cappedElapsedMs =
+        elapsedMs > kMicsBaselineDurationMs ? kMicsBaselineDurationMs : elapsedMs;
+    const unsigned long remainingSec = (kMicsBaselineDurationMs - cappedElapsedMs) / 1000;
+    display.printf("Base in: %lus\r\n", remainingSec);
   }
 
   display.display();
@@ -81,7 +155,17 @@ void drawStatusScreen(float temperatureC, float humidityPct, float pressureHpa) 
 void setup() {
   Serial.begin(115200);
   pinMode(kLedPin, OUTPUT);
+  pinMode(kRelayPin, OUTPUT);
+  setRelayAlarm(false);
+  analogReadResolution(12);
+  analogSetPinAttenuation(kMicsAnalogPin, ADC_11db);
+  gStartMs = millis();
   delay(200);
+
+  Serial.println("Relay self-test on GPIO25");
+  setRelayAlarm(true);
+  delay(500);
+  setRelayAlarm(false);
 
   Serial.printf("OLED test starting (SDA=%u, SCL=%u)\r\n", kOledSdaPin, kOledSclPin);
   gOledWire.begin(kOledSdaPin, kOledSclPin);
@@ -104,20 +188,30 @@ void setup() {
   } else {
     Serial.println("BME280 init failed. Check VCC/GND/SDA/SCL and ADR/CS pins.");
   }
+
+  Serial.printf("MiCS-5524 test starting (AO=GPIO%d)\r\n", kMicsAnalogPin);
+  Serial.println("Keep MiCS-5524 in clean air for the first 10 seconds.");
 }
 
 void loop() {
-  digitalWrite(kLedPin, HIGH);
-  delay(kBlinkIntervalMs);
-  digitalWrite(kLedPin, LOW);
-  delay(kBlinkIntervalMs);
+  const unsigned long now = millis();
+  if (now - gLastBlinkMs >= kBlinkIntervalMs) {
+    gLastBlinkMs = now;
+    gLedOn = !gLedOn;
+    digitalWrite(kLedPin, gLedOn ? HIGH : LOW);
+  }
 
-  if (millis() - gLastSensorReadMs >= kSensorReadIntervalMs) {
-    gLastSensorReadMs = millis();
+  if (now - gLastSensorReadMs >= kSensorReadIntervalMs) {
+    gLastSensorReadMs = now;
 
     float temperatureC = NAN;
     float humidityPct = NAN;
     float pressureHpa = NAN;
+    const int micsRaw = analogRead(kMicsAnalogPin);
+    const float micsVoltage = readMicsVoltage();
+    updateMicsBaseline(micsVoltage);
+    const bool gasDetected = isMicsGasDetected(micsVoltage);
+    setRelayAlarm(gasDetected);
 
     if (gBmeReady) {
       temperatureC = gBme.readTemperature();
@@ -130,8 +224,22 @@ void loop() {
       Serial.println("BME280 not ready");
     }
 
+    if (gMicsBaselineReady) {
+      const float delta = micsVoltage - gMicsBaselineVoltage;
+      const float ratio = gMicsBaselineVoltage > 0.01f ? micsVoltage / gMicsBaselineVoltage : 0.0f;
+      Serial.printf("MiCS-5524 -> raw=%d, V=%.3f, baseline=%.3f, delta=%+.3f, ratio=%.2f, gas=%s\r\n",
+                    micsRaw,
+                    micsVoltage,
+                    gMicsBaselineVoltage,
+                    delta,
+                    ratio,
+                    gasDetected ? "YES" : "no");
+    } else {
+      Serial.printf("MiCS-5524 baselining -> raw=%d, V=%.3f\r\n", micsRaw, micsVoltage);
+    }
+
     if (gDisplayReady) {
-      drawStatusScreen(temperatureC, humidityPct, pressureHpa);
+      drawStatusScreen(temperatureC, humidityPct, pressureHpa, micsRaw, micsVoltage, gasDetected);
     }
   }
 }
