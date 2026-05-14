@@ -5,6 +5,8 @@
 #include <Adafruit_BME280.h>
 
 constexpr uint8_t kLedPin = D9;
+constexpr uint8_t kGreenLedPin = 26;
+constexpr uint8_t kRedLedPin = 15;
 constexpr uint8_t kOledSdaPin = 18;
 constexpr uint8_t kOledSclPin = 23;
 constexpr uint8_t kBmeSdaPin = 22;
@@ -43,6 +45,11 @@ void setRelayAlarm(bool enabled) {
   const uint8_t activeState = kRelayActiveLow ? LOW : HIGH;
   const uint8_t inactiveState = kRelayActiveLow ? HIGH : LOW;
   digitalWrite(kRelayPin, enabled ? activeState : inactiveState);
+}
+
+void setStatusLeds(bool gasDetected) {
+  digitalWrite(kGreenLedPin, HIGH);
+  digitalWrite(kRedLedPin, gasDetected ? HIGH : LOW);
 }
 
 void scanI2CBus(TwoWire& bus, const char* label) {
@@ -155,7 +162,10 @@ void drawStatusScreen(float temperatureC,
 void setup() {
   Serial.begin(115200);
   pinMode(kLedPin, OUTPUT);
+  pinMode(kGreenLedPin, OUTPUT);
+  pinMode(kRedLedPin, OUTPUT);
   pinMode(kRelayPin, OUTPUT);
+  setStatusLeds(false);
   setRelayAlarm(false);
   analogReadResolution(12);
   analogSetPinAttenuation(kMicsAnalogPin, ADC_11db);
@@ -211,6 +221,7 @@ void loop() {
     const float micsVoltage = readMicsVoltage();
     updateMicsBaseline(micsVoltage);
     const bool gasDetected = isMicsGasDetected(micsVoltage);
+    setStatusLeds(gasDetected);
     setRelayAlarm(gasDetected);
 
     if (gBmeReady) {
