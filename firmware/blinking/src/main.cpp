@@ -13,7 +13,7 @@ constexpr const char* kWifiPassword = "YOUR_WIFI_PASSWORD";
 constexpr const char* kLocalApSsid = "LeakSense-ESP32";
 constexpr const char* kLocalApPassword = "12345678";
 constexpr const char* kFirebaseLatestUrl =
-    "https://leaksense-iot-default-rtdb.firebaseio.com/leaksense/latest.json";
+    "https://YOUR_PROJECT-default-rtdb.firebaseio.com/leaksense/latest.json";
 
 constexpr uint8_t kLedPin = D9;
 constexpr uint8_t kGreenLedPin = 17;
