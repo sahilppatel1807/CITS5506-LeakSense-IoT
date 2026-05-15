@@ -5,8 +5,8 @@
 #include <Adafruit_BME280.h>
 
 constexpr uint8_t kLedPin = D9;
-constexpr uint8_t kGreenLedPin = 26;
-constexpr uint8_t kRedLedPin = 15;
+constexpr uint8_t kGreenLedPin = 17;
+constexpr uint8_t kRedLedPin = 16;
 constexpr uint8_t kOledSdaPin = 18;
 constexpr uint8_t kOledSclPin = 23;
 constexpr uint8_t kBmeSdaPin = 22;
@@ -19,6 +19,7 @@ constexpr uint8_t kOledAddresses[] = {0x3C, 0x3D};
 constexpr uint8_t kBmeAddresses[] = {0x76, 0x77};
 constexpr uint8_t kMicsSamplesPerRead = 32;
 constexpr unsigned long kBlinkIntervalMs = 500;
+constexpr unsigned long kAlarmBlinkIntervalMs = 250;
 constexpr unsigned long kSensorReadIntervalMs = 2000;
 constexpr unsigned long kMicsBaselineDurationMs = 10000;
 constexpr float kMicsGasDeltaThresholdV = 0.25f;
@@ -37,8 +38,11 @@ uint8_t gBmeAddress = 0;
 float gMicsBaselineVoltage = 0.0f;
 bool gMicsBaselineReady = false;
 bool gLedOn = false;
+bool gAlarmLedOn = false;
+bool gGasDetected = false;
 unsigned long gStartMs = 0;
 unsigned long gLastBlinkMs = 0;
+unsigned long gLastAlarmBlinkMs = 0;
 unsigned long gLastSensorReadMs = 0;
 
 void setRelayAlarm(bool enabled) {
@@ -47,9 +51,20 @@ void setRelayAlarm(bool enabled) {
   digitalWrite(kRelayPin, enabled ? activeState : inactiveState);
 }
 
-void setStatusLeds(bool gasDetected) {
-  digitalWrite(kGreenLedPin, HIGH);
-  digitalWrite(kRedLedPin, gasDetected ? HIGH : LOW);
+void updateStatusLeds(unsigned long now) {
+  if (!gGasDetected) {
+    gAlarmLedOn = false;
+    digitalWrite(kGreenLedPin, HIGH);
+    digitalWrite(kRedLedPin, LOW);
+    return;
+  }
+
+  digitalWrite(kGreenLedPin, LOW);
+  if (now - gLastAlarmBlinkMs >= kAlarmBlinkIntervalMs) {
+    gLastAlarmBlinkMs = now;
+    gAlarmLedOn = !gAlarmLedOn;
+    digitalWrite(kRedLedPin, gAlarmLedOn ? HIGH : LOW);
+  }
 }
 
 void scanI2CBus(TwoWire& bus, const char* label) {
@@ -133,8 +148,7 @@ void drawStatusScreen(float temperatureC,
   display.println("LeakSense Test");
 
   if (gBmeReady) {
-    display.printf("T: %.1f C\r\n", temperatureC);
-    display.printf("H: %.1f %%\r\n", humidityPct);
+    display.printf("T:%.1fC H:%.1f%%\r\n", temperatureC, humidityPct);
     display.printf("P: %.1f hPa\r\n", pressureHpa);
   } else {
     display.println("BME280 not found");
@@ -153,7 +167,9 @@ void drawStatusScreen(float temperatureC,
     const unsigned long cappedElapsedMs =
         elapsedMs > kMicsBaselineDurationMs ? kMicsBaselineDurationMs : elapsedMs;
     const unsigned long remainingSec = (kMicsBaselineDurationMs - cappedElapsedMs) / 1000;
-    display.printf("Base in: %lus\r\n", remainingSec);
+    display.println("Calibrating MiCS...");
+    display.println("Reading baseline");
+    display.printf("Time left: %lus\r\n", remainingSec);
   }
 
   display.display();
@@ -165,7 +181,7 @@ void setup() {
   pinMode(kGreenLedPin, OUTPUT);
   pinMode(kRedLedPin, OUTPUT);
   pinMode(kRelayPin, OUTPUT);
-  setStatusLeds(false);
+  updateStatusLeds(millis());
   setRelayAlarm(false);
   analogReadResolution(12);
   analogSetPinAttenuation(kMicsAnalogPin, ADC_11db);
@@ -205,6 +221,8 @@ void setup() {
 
 void loop() {
   const unsigned long now = millis();
+  updateStatusLeds(now);
+
   if (now - gLastBlinkMs >= kBlinkIntervalMs) {
     gLastBlinkMs = now;
     gLedOn = !gLedOn;
@@ -220,9 +238,8 @@ void loop() {
     const int micsRaw = analogRead(kMicsAnalogPin);
     const float micsVoltage = readMicsVoltage();
     updateMicsBaseline(micsVoltage);
-    const bool gasDetected = isMicsGasDetected(micsVoltage);
-    setStatusLeds(gasDetected);
-    setRelayAlarm(gasDetected);
+    gGasDetected = isMicsGasDetected(micsVoltage);
+    setRelayAlarm(gGasDetected);
 
     if (gBmeReady) {
       temperatureC = gBme.readTemperature();
@@ -244,13 +261,13 @@ void loop() {
                     gMicsBaselineVoltage,
                     delta,
                     ratio,
-                    gasDetected ? "YES" : "no");
+                    gGasDetected ? "YES" : "no");
     } else {
       Serial.printf("MiCS-5524 baselining -> raw=%d, V=%.3f\r\n", micsRaw, micsVoltage);
     }
 
     if (gDisplayReady) {
-      drawStatusScreen(temperatureC, humidityPct, pressureHpa, micsRaw, micsVoltage, gasDetected);
+      drawStatusScreen(temperatureC, humidityPct, pressureHpa, micsRaw, micsVoltage, gGasDetected);
     }
   }
 }
