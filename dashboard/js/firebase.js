@@ -13,13 +13,13 @@
 // ── Firebase config — paste from Firebase Console ─────────────────────────────
 // Firebase Console → Project Settings → General → Your apps → SDK setup
 const firebaseConfig = {
-  apiKey:            'YOUR_API_KEY',
-  authDomain:        'YOUR_PROJECT.firebaseapp.com',
-  databaseURL:       'https://YOUR_PROJECT-default-rtdb.firebaseio.com',
-  projectId:         'YOUR_PROJECT',
-  storageBucket:     'YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId:             'YOUR_APP_ID',
+  apiKey:            'AIzaSyCbKMj2SODj0h8ywLfhknlg5nFAK1MGyEw',
+  authDomain:        'leaksense-iot.firebaseapp.com',
+  databaseURL:       'https://leaksense-iot-default-rtdb.firebaseio.com',
+  projectId:         'leaksense-iot',
+  storageBucket:     'leaksense-iot.firebasestorage.app',
+  messagingSenderId: '634659563301',
+  appId:             '1:634659563301:web:2652686e881e94a47b5ccc',
 };
 
 // Initialise Firebase

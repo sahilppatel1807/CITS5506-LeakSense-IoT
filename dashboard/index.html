@@ -8,9 +8,9 @@
   <!-- Chart.js from CDN — no install needed -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- Firebase from CDN — uncomment when Sohaib has Firebase ready -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script> -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script> -->
+  <!-- Firebase from CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -65,7 +65,9 @@
       <!-- Left: chart + simulator -->
       <div class="card chart-card">
         <p class="card__title">Gas concentration — last 60 readings</p>
-        <canvas id="trendChart"></canvas>
+        <div class="chart-frame">
+          <canvas id="trendChart"></canvas>
+        </div>
 
         <!-- Simulator slider — remove this block when Firebase is connected -->
         <div class="simulator" id="simulator">
@@ -140,11 +142,9 @@
   </div><!-- /.app -->
 
   <!-- JS files — order matters -->
-  <script src="js/mock.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/firebase.js"></script>
   <script src="js/dashboard.js"></script>
-  <!-- When Firebase ready, also add: -->
-  <!-- <script src="js/firebase.js"></script> -->
 
 </body>
 </html>

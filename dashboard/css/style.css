@@ -106,9 +106,16 @@ body {
 }
 
 /* ── Chart card ───────────────────────────────────────────────────────────── */
-.chart-card canvas {
+.chart-frame {
+  position: relative;
+  width: 100%;
+  height: 260px;
+}
+
+.chart-frame canvas {
+  display: block;
   width: 100% !important;
-  height: 200px !important;
+  height: 100% !important;
 }
 
 /* ── Simulator ────────────────────────────────────────────────────────────── */

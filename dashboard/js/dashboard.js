@@ -166,31 +166,30 @@ function onNewReading(data) {
 }
 
 // ── Simulator slider ───────────────────────────────────────────────────────────
-document.getElementById('simSlider').addEventListener('input', function () {
-  const val = parseInt(this.value);
-  document.getElementById('simVal').textContent = `${val} ppm`;
-  setMockBasePpm(val);  // from mock.js
-});
+const simSlider = document.getElementById('simSlider');
+if (simSlider && typeof setMockBasePpm === 'function') {
+  simSlider.addEventListener('input', function () {
+    const val = parseInt(this.value);
+    document.getElementById('simVal').textContent = `${val} ppm`;
+    setMockBasePpm(val);  // from mock.js
+  });
+}
 
 // ── Initialise ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initChart();  // from charts.js
 
-  // ── MOCK MODE (active now) ─────────────────────────────────────────────────
-  // Comment out this block and uncomment Firebase section below when ready
-  const mockInterval = setInterval(() => {
-    const reading = getMockReading();  // from mock.js
-    onNewReading(reading);
-  }, 2000);
+  if (typeof listenToSensorData === 'function') {
+    document.getElementById('simulator')?.remove();
+    document.querySelector('.simulator__note')?.remove();
+    listenToSensorData(onNewReading);
+    return;
+  }
 
-  // Run once immediately so dashboard isn't blank on load
-  onNewReading(getMockReading());
-
-
-  // ── FIREBASE MODE (uncomment when Sohaib has Firebase ready) ──────────────
-  // Delete the mock interval above and uncomment this block.
-  // Also uncomment the firebase.js script tags in index.html.
-  //
-  // import { listenToSensorData } from './firebase.js';
-  // listenToSensorData(onNewReading);
+  if (typeof getMockReading === 'function') {
+    setInterval(() => {
+      onNewReading(getMockReading());
+    }, 2000);
+    onNewReading(getMockReading());
+  }
 });

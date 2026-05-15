@@ -8,8 +8,34 @@
 const THRESHOLD_WARNING = 300;
 const THRESHOLD_DANGER  = 500;
 const MAX_POINTS        = 30;   // number of readings shown on chart
+const MIN_Y_MAX         = 750;
+const PEAK_HEADROOM     = 1.25; // highest point sits at about 80% of chart height
 
 let trendChart = null;
+
+function getNiceAxisMax(value) {
+  if (value <= MIN_Y_MAX) return MIN_Y_MAX;
+
+  const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+  const normalized = value / magnitude;
+  let niceNormalized = 10;
+
+  if (normalized <= 1) {
+    niceNormalized = 1;
+  } else if (normalized <= 2) {
+    niceNormalized = 2;
+  } else if (normalized <= 5) {
+    niceNormalized = 5;
+  }
+
+  return niceNormalized * magnitude;
+}
+
+function updateYAxisScale(gasData) {
+  const maxReading = gasData.reduce((max, value) => Math.max(max, Number(value) || 0), 0);
+  const targetMax = Math.max(THRESHOLD_DANGER, maxReading) * PEAK_HEADROOM;
+  trendChart.options.scales.y.max = getNiceAxisMax(targetMax);
+}
 
 /**
  * Initialises the Chart.js line chart on the canvas element.
@@ -58,8 +84,10 @@ function initChart() {
     options: {
       responsive:          true,
       maintainAspectRatio: false,
+      devicePixelRatio:    Math.min(window.devicePixelRatio || 1, 2),
       animation:           { duration: 300 },
       interaction:         { mode: 'index', intersect: false },
+      layout:              { padding: { top: 8, right: 8, bottom: 2, left: 0 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -74,14 +102,14 @@ function initChart() {
       scales: {
         x: {
           display: true,
-          ticks:   { font: { size: 10 }, color: '#9ca3af', maxTicksLimit: 6 },
+          ticks:   { font: { size: 12, lineHeight: 1.25 }, color: '#9ca3af', maxTicksLimit: 6 },
           grid:    { display: false },
           border:  { display: false },
         },
         y: {
           min:   0,
-          max:   750,
-          ticks: { font: { size: 10 }, color: '#9ca3af', maxTicksLimit: 6 },
+          max:   MIN_Y_MAX,
+          ticks: { font: { size: 12, lineHeight: 1.25 }, color: '#9ca3af', maxTicksLimit: 6 },
           grid:  { color: '#f3f4f6' },
           border: { display: false },
         },
@@ -117,5 +145,6 @@ function updateChart(ppm, time) {
     labels.shift();
   }
 
+  updateYAxisScale(gasData);
   trendChart.update('none');  // 'none' skips animation for smooth live updates
 }

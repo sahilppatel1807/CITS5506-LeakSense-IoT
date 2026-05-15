@@ -15,3 +15,7 @@ firmware/.vscode/
 .DS_Store
 Thumbs.db
 *.log
+
+# Generated dependency/build folders
+**/node_modules/
+**/.pio/
