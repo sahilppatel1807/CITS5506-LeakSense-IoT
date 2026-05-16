@@ -15,3 +15,11 @@ firmware/.vscode/
 .DS_Store
 Thumbs.db
 *.log
+
+# Generated dependency/build folders
+**/node_modules/
+**/.pio/
+**/__pycache__/
+
+# Local secrets managed by tools/manage_secrets.py
+tools/leaksense-local-secrets.json
