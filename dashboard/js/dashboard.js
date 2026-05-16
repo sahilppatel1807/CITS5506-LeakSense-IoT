@@ -10,10 +10,14 @@ const THRESHOLDS = {
   danger:  500,
 };
 
+const OFFLINE_TIMEOUT_MS = 15000;
+
 // ── State ──────────────────────────────────────────────────────────────────────
 let alertCount    = 0;
 let prevState     = 'safe';
 const alertLog    = [];   // stores alert entries for the log panel
+let lastReadingAt = 0;
+let isOffline     = false;
 
 // ── State helpers ──────────────────────────────────────────────────────────────
 
@@ -43,12 +47,14 @@ const STATE_MESSAGES = {
   safe:    'System operating normally. Gas levels within safe range.',
   warning: 'Warning: elevated gas concentration detected. Fan and buzzer activated.',
   danger:  'DANGER: critical gas level detected. Immediate action required. All alarms active.',
+  offline: 'Device offline. Waiting for fresh sensor data from Firebase.',
 };
 
 const PPM_SUBS = {
   safe:    'Within safe range',
   warning: 'Above warning threshold',
   danger:  'Above danger threshold',
+  offline: 'No recent sensor update',
 };
 
 function updateStatusBadge(state) {
@@ -91,6 +97,37 @@ function updateDeviceStates(data) {
   const red = document.getElementById('redLed');
   red.textContent = data.state !== 'safe' ? 'on' : 'off';
   red.className   = `pill${data.state !== 'safe' ? ' pill--on' : ''}`;
+
+  const cloud = document.getElementById('cloudSync');
+  cloud.textContent = 'live';
+  cloud.className   = 'pill pill--on';
+}
+
+function setOfflineState() {
+  if (isOffline) return;
+  isOffline = true;
+
+  updateStatusBadge('offline');
+  updateStateBar('offline');
+  document.getElementById('ppmSub').textContent = PPM_SUBS.offline;
+  document.getElementById('lastSync').textContent = lastReadingAt
+    ? `Last sync: ${formatTime(new Date(lastReadingAt))} (offline)`
+    : 'Last sync: no data';
+
+  const cloud = document.getElementById('cloudSync');
+  cloud.textContent = 'offline';
+  cloud.className   = 'pill pill--offline';
+}
+
+function checkOfflineState() {
+  if (!lastReadingAt) {
+    setOfflineState();
+    return;
+  }
+
+  if (Date.now() - lastReadingAt > OFFLINE_TIMEOUT_MS) {
+    setOfflineState();
+  }
 }
 
 function addAlertEntry(ppm, state) {
@@ -142,6 +179,8 @@ function renderAlertLog() {
  */
 function onNewReading(data) {
   const time = formatTime();
+  lastReadingAt = Date.now();
+  isOffline = false;
 
   updateStatusBadge(data.state);
   updateStateBar(data.state);
@@ -160,5 +199,6 @@ function onNewReading(data) {
 // ── Initialise ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initChart();  // from charts.js
-  listenToSensorData(onNewReading);
+  listenToSensorData(onNewReading, setOfflineState);
+  setInterval(checkOfflineState, 1000);
 });

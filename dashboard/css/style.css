@@ -55,6 +55,7 @@ body {
 .status-badge.safe    { background: #d1fae5; color: #065f46; }
 .status-badge.warning { background: #fef3c7; color: #92400e; }
 .status-badge.danger  { background: #fee2e2; color: #991b1b; }
+.status-badge.offline { background: #e5e7eb; color: #374151; }
 
 /* ── State notification bar ───────────────────────────────────────────────── */
 .state-bar {
@@ -69,6 +70,7 @@ body {
 .state-bar.safe    { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
 .state-bar.warning { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
 .state-bar.danger  { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.state-bar.offline { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
 
 /* ── Card ─────────────────────────────────────────────────────────────────── */
 .card {
@@ -153,6 +155,10 @@ body {
 .pill--on {
   background: #d1fae5;
   color: #065f46;
+}
+.pill--offline {
+  background: #e5e7eb;
+  color: #374151;
 }
 
 /* ── Alert log ────────────────────────────────────────────────────────────── */

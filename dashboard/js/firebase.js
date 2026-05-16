@@ -32,8 +32,9 @@ const db = firebase.database();
  * The data shape matches onNewReading() in dashboard.js.
  *
  * @param {function} callback - onNewReading from dashboard.js
+ * @param {function} onError - called if Firebase listener fails
  */
-function listenToSensorData(callback) {
+function listenToSensorData(callback, onError) {
   const ref = db.ref('leaksense/latest');
 
   ref.on('value', (snapshot) => {
@@ -51,5 +52,8 @@ function listenToSensorData(callback) {
       buzzer:          data.buzzer      ?? false,
       timestamp:       data.timestamp   ?? Date.now(),
     });
+  }, (error) => {
+    console.error('Firebase listener failed:', error);
+    if (onError) onError(error);
   });
 }
