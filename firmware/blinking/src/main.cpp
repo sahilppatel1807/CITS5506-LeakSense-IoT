@@ -10,8 +10,6 @@
 
 constexpr const char* kWifiSsid = "YOUR_2_4GHZ_WIFI_SSID";
 constexpr const char* kWifiPassword = "YOUR_WIFI_PASSWORD";
-constexpr const char* kLocalApSsid = "LeakSense-ESP32";
-constexpr const char* kLocalApPassword = "12345678";
 constexpr const char* kFirebaseLatestUrl =
     "https://YOUR_PROJECT-default-rtdb.firebaseio.com/leaksense/latest.json";
 
@@ -105,8 +103,8 @@ const char kLocalDashboardHtml[] PROGMEM = R"rawliteral(
     <div class="card wide">
       <div class="row"><span>Fan / relay</span><strong id="fan">--</strong></div>
       <div class="row"><span>Buzzer / alarm</span><strong id="buzzer">--</strong></div>
-      <div class="row"><span>Router WiFi</span><strong id="wifi">--</strong></div>
-      <div class="row"><span>AP IP</span><strong id="apIp">--</strong></div>
+      <div class="row"><span>WiFi status</span><strong id="wifi">--</strong></div>
+      <div class="row"><span>Local page</span><strong id="localIp">--</strong></div>
       <div class="row"><span>Last update</span><strong id="updated">--</strong></div>
     </div>
   </section>
@@ -125,8 +123,8 @@ async function refresh(){
     document.getElementById('raw').textContent=Math.round(d.ppm_raw||0);
     document.getElementById('fan').textContent=d.fan?'ON':'off';
     document.getElementById('buzzer').textContent=d.buzzer?'ON':'off';
-    document.getElementById('wifi').textContent=d.router_connected?d.router_ip:'offline';
-    document.getElementById('apIp').textContent=d.ap_ip;
+    document.getElementById('wifi').textContent=d.wifi_connected?'online':'offline';
+    document.getElementById('localIp').textContent=d.local_ip;
     document.getElementById('updated').textContent=new Date().toLocaleTimeString();
   }catch(e){document.getElementById('updated').textContent='connection lost'}
 }
@@ -153,9 +151,8 @@ String buildLatestReadingJson() {
   payload += "\"fan\":" + boolJson(gLatestAlarmOn) + ",";
   payload += "\"buzzer\":" + boolJson(gLatestAlarmOn) + ",";
   payload += "\"baseline_ready\":" + boolJson(gMicsBaselineReady) + ",";
-  payload += "\"router_connected\":" + boolJson(WiFi.status() == WL_CONNECTED) + ",";
-  payload += "\"router_ip\":\"" + WiFi.localIP().toString() + "\",";
-  payload += "\"ap_ip\":\"" + WiFi.softAPIP().toString() + "\",";
+  payload += "\"wifi_connected\":" + boolJson(WiFi.status() == WL_CONNECTED) + ",";
+  payload += "\"local_ip\":\"" + WiFi.localIP().toString() + "\",";
   payload += "\"timestamp\":" + String(gLatestReadingMs);
   payload += "}";
   return payload;
@@ -189,35 +186,27 @@ void startLocalServer() {
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
+    startLocalServer();
     return;
   }
 
-  WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(kLocalApSsid, kLocalApPassword);
-  Serial.print("Local AP SSID: ");
-  Serial.println(kLocalApSsid);
-  Serial.print("Local AP password: ");
-  Serial.println(kLocalApPassword);
-  Serial.print("Local AP IP: ");
-  Serial.println(WiFi.softAPIP());
-  startLocalServer();
-
+  WiFi.mode(WIFI_STA);
   WiFi.begin(kWifiSsid, kWifiPassword);
 
-  Serial.print("Connecting to router WiFi");
+  Serial.print("Connecting to WiFi");
   const unsigned long startMs = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startMs < 20000) {
-    gServer.handleClient();
     delay(500);
     Serial.print(".");
   }
   Serial.println();
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Router WiFi connected, IP: ");
+    Serial.print("WiFi connected, local dashboard: http://");
     Serial.println(WiFi.localIP());
+    startLocalServer();
   } else {
-    Serial.println("Router WiFi failed. Local AP dashboard is still available.");
+    Serial.println("WiFi connection failed. Firebase and local IP page are unavailable.");
   }
 }
 
