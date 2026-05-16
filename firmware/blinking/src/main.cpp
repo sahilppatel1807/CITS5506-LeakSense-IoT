@@ -4,12 +4,14 @@
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <WebServer.h>
+#include <ESPmDNS.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME280.h>
 
 constexpr const char* kWifiSsid = "YOUR_2_4GHZ_WIFI_SSID";
 constexpr const char* kWifiPassword = "YOUR_WIFI_PASSWORD";
+constexpr const char* kMdnsHostname = "leaksense";
 constexpr const char* kFirebaseLatestUrl =
     "https://YOUR_PROJECT-default-rtdb.firebaseio.com/leaksense/latest.json";
 
@@ -45,6 +47,7 @@ WebServer gServer(80);
 bool gDisplayReady = false;
 bool gBmeReady = false;
 bool gLocalServerReady = false;
+bool gMdnsReady = false;
 uint8_t gDisplayAddress = 0;
 uint8_t gBmeAddress = 0;
 float gMicsBaselineVoltage = 0.0f;
@@ -184,8 +187,25 @@ void startLocalServer() {
   Serial.println("Local dashboard started.");
 }
 
+void startMdns() {
+  if (gMdnsReady || WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+
+  if (MDNS.begin(kMdnsHostname)) {
+    MDNS.addService("http", "tcp", 80);
+    gMdnsReady = true;
+    Serial.print("mDNS started: http://");
+    Serial.print(kMdnsHostname);
+    Serial.println(".local");
+  } else {
+    Serial.println("mDNS start failed. Use the printed IP address instead.");
+  }
+}
+
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
+    startMdns();
     startLocalServer();
     return;
   }
@@ -204,6 +224,7 @@ void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("WiFi connected, local dashboard: http://");
     Serial.println(WiFi.localIP());
+    startMdns();
     startLocalServer();
   } else {
     Serial.println("WiFi connection failed. Firebase and local IP page are unavailable.");
