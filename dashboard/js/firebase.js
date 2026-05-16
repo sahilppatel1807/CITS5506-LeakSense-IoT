@@ -6,8 +6,7 @@
  * HOW TO ACTIVATE:
  * 1. Sohaib pastes the Firebase config below
  * 2. Uncomment the Firebase script tags in index.html
- * 3. In dashboard.js, comment out the mock interval
- *    and uncomment the listenToSensorData() call
+ * 3. Make sure dashboard.js calls listenToSensorData()
  */
 
 // ── Firebase config — paste from Firebase Console ─────────────────────────────
@@ -30,8 +29,7 @@ const db = firebase.database();
  * Subscribes to live sensor data from Firebase.
  * Calls the provided callback every time ESP32 pushes a new reading.
  *
- * The data shape matches getMockReading() in mock.js exactly —
- * so onNewReading() in dashboard.js works with both without any changes.
+ * The data shape matches onNewReading() in dashboard.js.
  *
  * @param {function} callback - onNewReading from dashboard.js
  */
@@ -42,7 +40,7 @@ function listenToSensorData(callback) {
     const data = snapshot.val();
     if (!data) return;
 
-    // Map Firebase fields to the same shape as getMockReading()
+    // Map Firebase fields to the dashboard reading shape.
     callback({
       ppm_compensated: Math.round(data.ppm_compensated ?? 0),
       ppm_raw:         Math.round(data.ppm_raw ?? 0),

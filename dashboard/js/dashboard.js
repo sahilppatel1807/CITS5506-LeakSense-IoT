@@ -1,12 +1,7 @@
 /**
  * dashboard.js
- * Main dashboard logic — reads from mock.js (now) or firebase.js (later),
- * updates all UI elements, manages alert log and state machine.
- *
- * To switch to real Firebase data:
- * 1. Add firebase.js script tag in index.html
- * 2. Comment out the mock interval at the bottom of this file
- * 3. Uncomment the Firebase listener section
+ * Main dashboard logic.
+ * Reads live sensor data from Firebase Realtime Database and updates the UI.
  */
 
 // ── Thresholds — must match firmware/src/config.h ─────────────────────────────
@@ -24,7 +19,6 @@ const alertLog    = [];   // stores alert entries for the log panel
 
 /**
  * Derives system state from ppm value.
- * Exposed globally so mock.js can use it too.
  * @param {number} ppm
  * @returns {'safe'|'warning'|'danger'}
  */
@@ -136,8 +130,6 @@ function renderAlertLog() {
 // ── Main update — called on every new reading ──────────────────────────────────
 /**
  * Takes a sensor reading object and updates the entire dashboard.
- * This function is called by both mock mode and Firebase mode —
- * the shape of `data` is identical in both cases.
  *
  * @param {{
  *   ppm_compensated: number,
@@ -165,31 +157,8 @@ function onNewReading(data) {
   prevState = data.state;
 }
 
-// ── Simulator slider ───────────────────────────────────────────────────────────
-const simSlider = document.getElementById('simSlider');
-if (simSlider && typeof setMockBasePpm === 'function') {
-  simSlider.addEventListener('input', function () {
-    const val = parseInt(this.value);
-    document.getElementById('simVal').textContent = `${val} ppm`;
-    setMockBasePpm(val);  // from mock.js
-  });
-}
-
 // ── Initialise ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initChart();  // from charts.js
-
-  if (typeof listenToSensorData === 'function') {
-    document.getElementById('simulator')?.remove();
-    document.querySelector('.simulator__note')?.remove();
-    listenToSensorData(onNewReading);
-    return;
-  }
-
-  if (typeof getMockReading === 'function') {
-    setInterval(() => {
-      onNewReading(getMockReading());
-    }, 2000);
-    onNewReading(getMockReading());
-  }
+  listenToSensorData(onNewReading);
 });
