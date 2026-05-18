@@ -43,6 +43,16 @@ function formatTime(date = new Date()) {
   });
 }
 
+function getReadingDate(timestamp) {
+  if (!timestamp) return new Date();
+
+  const numericTimestamp = Number(timestamp);
+  if (!Number.isFinite(numericTimestamp)) return new Date();
+
+  // Firebase/ESP32 timestamps may be seconds or milliseconds.
+  return new Date(numericTimestamp < 10000000000 ? numericTimestamp * 1000 : numericTimestamp);
+}
+
 // ── UI update functions ────────────────────────────────────────────────────────
 
 const STATE_MESSAGES = {
@@ -74,7 +84,7 @@ function updateMetrics(data) {
   document.getElementById('ppmSub').textContent  = PPM_SUBS[data.state];
   document.getElementById('tempVal').textContent = `${data.temperature}°C`;
   document.getElementById('humVal').textContent  = `${data.humidity}%`;
-  document.getElementById('lastSync').textContent = `Last sync: ${formatTime()}`;
+  document.getElementById('lastSync').textContent = `Last sync: ${formatTime(getReadingDate(data.timestamp))}`;
 }
 
 function updateDeviceStates(data) {
@@ -149,7 +159,7 @@ function renderAlertLog() {
  * }} data
  */
 function onNewReading(data) {
-  const time = formatTime();
+  const time = formatTime(getReadingDate(data.timestamp));
 
   updateStatusBadge(data.state);
   updateStateBar(data.state);
@@ -165,32 +175,24 @@ function onNewReading(data) {
   prevState = data.state;
 }
 
-// ── Simulator slider ───────────────────────────────────────────────────────────
-document.getElementById('simSlider').addEventListener('input', function () {
-  const val = parseInt(this.value);
-  document.getElementById('simVal').textContent = `${val} ppm`;
-  setMockBasePpm(val);  // from mock.js
-});
-
 // ── Initialise ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initChart();  // from charts.js
 
-  // ── MOCK MODE (active now) ─────────────────────────────────────────────────
-  // Comment out this block and uncomment Firebase section below when ready
+  // ── FIREBASE MODE ─────────────────────────────────────────────────────────
+  // firebase.js is loaded as a classic script, so listenToSensorData is global.
+  // If Firebase is unavailable, keep the mock dashboard alive for local testing.
+  if (typeof listenToSensorData === 'function') {
+    listenToSensorData(onNewReading);
+    return;
+  }
+
+  // ── MOCK FALLBACK ─────────────────────────────────────────────────────────
   const mockInterval = setInterval(() => {
     const reading = getMockReading();  // from mock.js
     onNewReading(reading);
   }, 2000);
 
-  // Run once immediately so dashboard isn't blank on load
+  // Run once immediately so dashboard isn't blank on load.
   onNewReading(getMockReading());
-
-
-  // ── FIREBASE MODE (uncomment when Sohaib has Firebase ready) ──────────────
-  // Delete the mock interval above and uncomment this block.
-  // Also uncomment the firebase.js script tags in index.html.
-  //
-  // import { listenToSensorData } from './firebase.js';
-  // listenToSensorData(onNewReading);
 });

@@ -8,6 +8,7 @@ dashboard/.env
 # ── Firmware ──────────────────────────────────────────────────────────────────
 # NEVER commit credentials - each person creates their own locally
 firmware/src/secrets.h
+firmware/blinking/src/secrets.h
 firmware/.pio/
 firmware/.vscode/
 
