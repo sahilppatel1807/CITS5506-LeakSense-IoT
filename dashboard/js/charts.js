@@ -7,7 +7,7 @@
 // Thresholds — must match dashboard.js and firmware/src/config.h
 const THRESHOLD_WARNING = 300;
 const THRESHOLD_DANGER  = 500;
-const MAX_POINTS        = 30;   // number of readings shown on chart
+const MAX_POINTS        = 60;   // number of readings shown on chart
 
 let trendChart = null;
 
@@ -29,7 +29,8 @@ function initChart() {
           borderColor:     '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.07)',
           borderWidth:     2,
-          pointRadius:     0,
+          pointRadius:     2,
+          pointHoverRadius: 4,
           tension:         0.4,
           fill:            true,
         },
@@ -118,4 +119,12 @@ function updateChart(ppm, time) {
   }
 
   trendChart.update('none');  // 'none' skips animation for smooth live updates
+}
+
+function resetChart() {
+  trendChart.data.labels = [];
+  trendChart.data.datasets.forEach((dataset) => {
+    dataset.data = [];
+  });
+  trendChart.update('none');
 }
