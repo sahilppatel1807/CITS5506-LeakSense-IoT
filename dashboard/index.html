@@ -9,8 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Firebase from CDN — uncomment when Sohaib has Firebase ready -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script> -->
-  <!-- <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script> -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -62,23 +62,10 @@
     <!-- ── Main grid ──────────────────────────────────────────────────────── -->
     <div class="main-grid">
 
-      <!-- Left: chart + simulator -->
+      <!-- Left: chart -->
       <div class="card chart-card">
         <p class="card__title">Gas concentration — last 60 readings</p>
         <canvas id="trendChart"></canvas>
-
-        <!-- Simulator slider — remove this block when Firebase is connected -->
-        <div class="simulator" id="simulator">
-          <label class="simulator__label">Simulate ppm:</label>
-          <input
-            type="range"
-            id="simSlider"
-            class="simulator__slider"
-            min="0" max="700" step="1" value="120"
-          />
-          <span class="simulator__val" id="simVal">120 ppm</span>
-        </div>
-        <p class="simulator__note">Mock data only — remove slider when Firebase is connected</p>
       </div>
 
       <!-- Right: device states + alert log -->
@@ -144,7 +131,7 @@
   <script src="js/charts.js"></script>
   <script src="js/dashboard.js"></script>
   <!-- When Firebase ready, also add: -->
-  <!-- <script src="js/firebase.js"></script> -->
+  <script src="js/firebase.js"></script>
 
 </body>
 </html>

@@ -111,20 +111,6 @@ body {
   height: 200px !important;
 }
 
-/* ── Simulator ────────────────────────────────────────────────────────────── */
-.simulator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #f3f4f6;
-}
-.simulator__label  { font-size: 12px; color: #6b7280; white-space: nowrap; }
-.simulator__slider { flex: 1; accent-color: #3b82f6; }
-.simulator__val    { font-size: 12px; font-weight: 500; color: #111827; min-width: 64px; text-align: right; }
-.simulator__note   { font-size: 11px; color: #9ca3af; margin-top: 6px; }
-
 /* ── Right column ─────────────────────────────────────────────────────────── */
 .right-col {
   display: flex;

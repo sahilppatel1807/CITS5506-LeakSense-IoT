@@ -5,7 +5,7 @@
  * Replace with firebase.js instead.
  */
 
-// Controlled by the simulator slider in the dashboard
+// Used only as a local fallback when Firebase is unavailable.
 let mockBasePpm = 120;
 
 /**
