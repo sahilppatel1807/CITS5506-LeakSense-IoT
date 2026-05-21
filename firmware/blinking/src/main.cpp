@@ -1,8 +1,12 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME280.h>
+#include "secrets.h"
 
 constexpr uint8_t kLedPin = D9;
 constexpr uint8_t kGreenLedPin = 17;
@@ -73,6 +77,7 @@ bool gBmeReady = false;
 uint8_t gDisplayAddress = 0;
 uint8_t gBmeAddress = 0;
 
+bool gWiFiConnected = false;
 
 bool gLedOn = false;
 
@@ -223,6 +228,106 @@ void runLedSelfTest() {
   setStatusLeds(false, false, false);
 }
 
+bool connectToWiFi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    return true;
+  }
+
+  Serial.printf("Connecting to WiFi SSID='%s'...\r\n", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  unsigned long start = millis();
+  while (millis() - start < 15000) {
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.printf("WiFi connected, IP=%s\r\n", WiFi.localIP().toString().c_str());
+      gWiFiConnected = true;
+      return true;
+    }
+    Serial.print('.');
+    delay(500);
+  }
+
+  Serial.println();
+  Serial.println("WiFi connection failed");
+  gWiFiConnected = false;
+  return false;
+}
+
+float gasRatio(const GasSensorState& sensor);
+
+float estimatePpm(const GasSensorState& sensor) {
+  if (!sensor.baselineReady || sensor.baselineVoltage <= 0.0f) {
+    return 0.0f;
+  }
+
+  const float ratio = gasRatio(sensor);
+  if (ratio <= 1.0f) {
+    return 0.0f;
+  }
+  if (ratio <= 2.2f) {
+    return (ratio - 1.0f) * 250.0f;
+  }
+  return 300.0f + (ratio - 2.2f) * 500.0f;
+}
+
+String firebasePayload(float ppm, float rawPpm, float temperatureC, float humidityPct, const char* state, bool fan, bool buzzer, unsigned long timestamp) {
+  String payload = "{";
+  payload += "\"ppm_compensated\":" + String(ppm, 1) + ",";
+  payload += "\"ppm_raw\":" + String(rawPpm, 1) + ",";
+  payload += "\"temperature\":" + String(temperatureC, 1) + ",";
+  payload += "\"humidity\":" + String(humidityPct, 1) + ",";
+  payload += "\"state\":\"" + String(state) + "\",";
+  payload += "\"fan\":" + String(fan ? "true" : "false") + ",";
+  payload += "\"buzzer\":" + String(buzzer ? "true" : "false") + ",";
+  payload += "\"timestamp\":" + String(timestamp);
+  payload += "}";
+  return payload;
+}
+
+bool uploadToFirebase(float ppmCompensated,
+                      float ppmRaw,
+                      float temperatureC,
+                      float humidityPct,
+                      const char* state,
+                      bool fan,
+                      bool buzzer,
+                      unsigned long timestamp) {
+  if (WiFi.status() != WL_CONNECTED) {
+    return false;
+  }
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  const String url = String("https://") + FIREBASE_HOST + "/leaksense/latest.json?auth=" + FIREBASE_AUTH;
+
+  if (!http.begin(client, url)) {
+    Serial.println("Firebase: begin failed");
+    return false;
+  }
+
+  http.addHeader("Content-Type", "application/json");
+  const String payload = firebasePayload(ppmCompensated, ppmRaw, temperatureC, humidityPct, state, fan, buzzer, timestamp);
+  const int httpCode = http.PUT(payload);
+
+  if (httpCode <= 0) {
+    Serial.printf("Firebase: request failed (%d)\r\n", httpCode);
+    http.end();
+    return false;
+  }
+
+  if (httpCode >= 200 && httpCode < 300) {
+    Serial.printf("Firebase: uploaded latest reading, code=%d\r\n", httpCode);
+    http.end();
+    return true;
+  }
+
+  Serial.printf("Firebase: upload error %d -> %s\r\n", httpCode, http.errorToString(httpCode).c_str());
+  http.end();
+  return false;
+}
+
 void updateStatusLeds(unsigned long now) {
   if (gDetectionPaused) {
     updateDetectionPause(now);
@@ -343,6 +448,8 @@ float readAnalogVoltage(int analogPin) {
   const float raw = total / static_cast<float>(kGasSamplesPerRead);
   return raw * 3.3f / 4095.0f;
 }
+
+float gasRatio(const GasSensorState& sensor);
 
 void updateGasBaseline(GasSensorState& sensor) {
   if (sensor.baselineReady) {
@@ -509,6 +616,12 @@ void setup() {
   Serial.println("SEN0565 alarm contribution: enabled");
   Serial.println("Keep SEN0565 in clean air for the first 10 seconds.");
   Serial.println("Warm SEN0565 for at least 5 minutes before trusting its thresholds.");
+
+  if (connectToWiFi()) {
+    Serial.println("WiFi connected, ready for Firebase upload.");
+  } else {
+    Serial.println("WiFi not connected. Will retry in loop().");
+  }
 }
 
 void loop() {
@@ -564,6 +677,30 @@ void loop() {
 
 
 
+
+    if (!gWiFiConnected) {
+      if (connectToWiFi()) {
+        Serial.println("WiFi reconnected in loop().");
+      }
+    }
+
+    const float ppmCompensated = estimatePpm(gSen0565Sensor);
+    const float ppmRaw = gSen0565Sensor.raw * 0.25f;
+    const char* stateName = gasLevelName(gGasLevel);
+    const bool fanOn = gDangerAlarmActive;
+    const bool buzzerOn = gDangerAlarmActive;
+    const unsigned long timestamp = millis() / 1000;
+
+    if (gWiFiConnected) {
+      uploadToFirebase(ppmCompensated,
+                       ppmRaw,
+                       temperatureC,
+                       humidityPct,
+                       stateName,
+                       fanOn,
+                       buzzerOn,
+                       timestamp);
+    }
 
     if (gDisplayReady) {
       drawStatusScreen(temperatureC,
