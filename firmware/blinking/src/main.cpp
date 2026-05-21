@@ -359,17 +359,23 @@ void updateStatusLeds(unsigned long now) {
 
 void handleAlarmCancelButton(unsigned long now) {
   const bool reading = digitalRead(kAlarmCancelButtonPin);
-  if (reading != gLastButtonReading) {
-    gLastButtonReading = reading;
-    gLastButtonChangeMs = now;
-  }
-
-  if (now - gLastButtonChangeMs < kButtonDebounceMs || reading == gButtonStableState) {
+  
+  // 如果状态没变，什么都不做
+  if (reading == gLastButtonReading) {
     return;
   }
-
-  gButtonStableState = reading;
-  if (gButtonStableState == LOW) {
+  
+  // 状态变了，检查防抖时间是否足够
+  if (now - gLastButtonChangeMs < kButtonDebounceMs) {
+    return;
+  }
+  
+  // 防抖通过，更新状态
+  gLastButtonReading = reading;
+  gLastButtonChangeMs = now;
+  
+  // 只在按下时触发（LOW）
+  if (reading == LOW) {
     Serial.println("Detection paused by GPIO14 button for 10 seconds");
     startDetectionPause(now);
   }
