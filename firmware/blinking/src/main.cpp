@@ -26,21 +26,17 @@ constexpr uint8_t kOledAddresses[] = {0x3C, 0x3D};
 constexpr uint8_t kBmeAddresses[] = {0x76, 0x77};
 constexpr uint8_t kGasSamplesPerRead = 32;
 constexpr unsigned long kBlinkIntervalMs = 500;
-constexpr unsigned long kRedBlinkIntervalMs = 500;
+constexpr unsigned long kRedBlinkIntervalMs = 75;
 constexpr unsigned long kSensorReadIntervalMs = 2000;
-constexpr unsigned long kFirebaseHistoryIntervalMs = 60000;
-constexpr unsigned long kGasBaselineDurationMs = 30000;
+constexpr unsigned long kFirebaseHistoryIntervalMs = 300000;
+constexpr unsigned long kGasBaselineDurationMs = 10000;
 constexpr unsigned long kLedSelfTestIntervalMs = 500;
 constexpr unsigned long kDangerAlarmDurationMs = 10000;
 constexpr unsigned long kDetectionPauseDurationMs = 10000;
-constexpr unsigned long kButtonDebounceMs = 50;
-constexpr float kSen0565WarningDeltaThresholdV = 0.18f;
-constexpr float kSen0565WarningRatioThreshold = 1.10f;
-constexpr float kSen0565DangerDeltaThresholdV = 0.33f;
-constexpr float kSen0565DangerRatioThreshold = 1.18f;
-constexpr float kSen0565ExtremeDeltaThresholdV = 0.52f;
-constexpr float kSen0565ExtremeRatioThreshold = 1.30f;
-constexpr uint8_t kGasLevelConfirmReads = 2;
+constexpr float kSen0565WarningVoltageThresholdV = 1.60f;
+constexpr float kSen0565DangerVoltageThresholdV = 1.90f;
+constexpr float kSen0565ExtremeVoltageThresholdV = 2.20f;
+constexpr uint8_t kGasLevelConfirmReads = 5;
 constexpr bool kAlarmOutputActiveLow = true;
 constexpr bool kFanRelayActiveLow = true;
 constexpr float kGasBaselineFollowAlpha = 0.02f;
@@ -56,12 +52,9 @@ enum class GasLevel {
 struct GasSensorState {
   const char* name;
   int analogPin;
-  float warningDeltaThresholdV;
-  float warningRatioThreshold;
-  float dangerDeltaThresholdV;
-  float dangerRatioThreshold;
-  float extremeDeltaThresholdV;
-  float extremeRatioThreshold;
+  float warningVoltageThresholdV;
+  float dangerVoltageThresholdV;
+  float extremeVoltageThresholdV;
   float baselineVoltage;
   bool baselineReady;
   int raw;
@@ -89,9 +82,7 @@ bool gGasDetected = false;
 bool gDangerAlarmActive = false;
 bool gDetectionPaused = false;
 bool gRedBlinkOn = false;
-bool gGreenBlinkOn = false;
-bool gLastButtonReading = HIGH;
-bool gButtonStableState = HIGH;
+bool gAlarmCancelButtonLatched = false;
 GasLevel gGasLevel = GasLevel::Safe;
 GasLevel gLastGasLevel = GasLevel::Safe;
 GasLevel gPendingGasLevel = GasLevel::Safe;
@@ -99,20 +90,15 @@ uint8_t gPendingGasLevelCount = 0;
 unsigned long gStartMs = 0;
 unsigned long gLastBlinkMs = 0;
 unsigned long gLastRedBlinkMs = 0;
-unsigned long gLastGreenBlinkMs = 0;
 unsigned long gLastSensorReadMs = 0;
 unsigned long gLastFirebaseHistoryMs = 0;
 unsigned long gDangerAlarmStartMs = 0;
 unsigned long gDetectionPauseStartMs = 0;
-unsigned long gLastButtonChangeMs = 0;
 GasSensorState gSen0565Sensor = {"SEN0565",
                                  kSen0565AnalogPin,
-                                 kSen0565WarningDeltaThresholdV,
-                                 kSen0565WarningRatioThreshold,
-                                 kSen0565DangerDeltaThresholdV,
-                                 kSen0565DangerRatioThreshold,
-                                 kSen0565ExtremeDeltaThresholdV,
-                                 kSen0565ExtremeRatioThreshold,
+                                 kSen0565WarningVoltageThresholdV,
+                                 kSen0565DangerVoltageThresholdV,
+                                 kSen0565ExtremeVoltageThresholdV,
                                  0.0f,
                                  false,
                                  0,
@@ -146,6 +132,10 @@ void setFanRelay(bool enabled) {
 }
  
 void setStatusLeds(bool greenOn, bool redOn, bool yellowOn);
+void handleAlarmCancelButton(unsigned long now);
+void updateDangerAlarm(unsigned long now);
+void updateStatusLeds(unsigned long now);
+void serviceAlarmControls(unsigned long now);
  
 void startDangerAlarm(unsigned long now) {
   gDangerAlarmActive = true;
@@ -172,9 +162,6 @@ void startDetectionPause(unsigned long now) {
   stopDangerAlarm();
   gDetectionPaused = true;
   gDetectionPauseStartMs = now;
-  gGreenBlinkOn = true;
-  gLastGreenBlinkMs = now;
-  setStatusLeds(true, false, false);
 }
  
 void updateDetectionPause(unsigned long now) {
@@ -184,17 +171,10 @@ void updateDetectionPause(unsigned long now) {
  
   if (now - gDetectionPauseStartMs >= kDetectionPauseDurationMs) {
     gDetectionPaused = false;
-    gGreenBlinkOn = false;
     gLastSensorReadMs = 0;
     Serial.println("Detection pause ended; monitoring resumed");
     return;
   }
- 
-  if (now - gLastGreenBlinkMs >= kBlinkIntervalMs) {
-    gLastGreenBlinkMs = now;
-    gGreenBlinkOn = !gGreenBlinkOn;
-  }
-  setStatusLeds(gGreenBlinkOn, false, false);
 }
  
 void updateDangerAlarm(unsigned long now) {
@@ -250,7 +230,10 @@ bool connectToWiFi() {
       return true;
     }
     Serial.print('.');
-    delay(500);
+    for (uint8_t i = 0; i < 10 && WiFi.status() != WL_CONNECTED; ++i) {
+      serviceAlarmControls(millis());
+      delay(50);
+    }
   }
  
   Serial.println();
@@ -285,10 +268,18 @@ String jsonFloat(float value, unsigned int decimalPlaces) {
   return String(value, decimalPlaces);
 }
  
-String firebasePayload(float ppm, float rawPpm, float temperatureC, float humidityPct, const char* state, bool fan, bool buzzer) {
+String firebasePayload(float ppm,
+                       float rawPpm,
+                       float gasVoltage,
+                       float temperatureC,
+                       float humidityPct,
+                       const char* state,
+                       bool fan,
+                       bool buzzer) {
   String payload = "{";
   payload += "\"ppm_compensated\":" + jsonFloat(ppm, 1) + ",";
   payload += "\"ppm_raw\":" + jsonFloat(rawPpm, 1) + ",";
+  payload += "\"voltage\":" + jsonFloat(gasVoltage, 3) + ",";
   payload += "\"temperature\":" + jsonFloat(temperatureC, 1) + ",";
   payload += "\"humidity\":" + jsonFloat(humidityPct, 1) + ",";
   payload += "\"state\":\"" + String(state) + "\",";
@@ -303,6 +294,7 @@ bool uploadReadingToFirebase(const char* node,
                              bool append,
                              float ppmCompensated,
                              float ppmRaw,
+                             float gasVoltage,
                              float temperatureC,
                              float humidityPct,
                              const char* state,
@@ -323,7 +315,14 @@ bool uploadReadingToFirebase(const char* node,
   }
  
   http.addHeader("Content-Type", "application/json");
-  const String payload = firebasePayload(ppmCompensated, ppmRaw, temperatureC, humidityPct, state, fan, buzzer);
+  const String payload = firebasePayload(ppmCompensated,
+                                         ppmRaw,
+                                         gasVoltage,
+                                         temperatureC,
+                                         humidityPct,
+                                         state,
+                                         fan,
+                                         buzzer);
   const int httpCode = append ? http.POST(payload) : http.PUT(payload);
  
   if (httpCode <= 0) {
@@ -345,6 +344,7 @@ bool uploadReadingToFirebase(const char* node,
  
 bool uploadLatestToFirebase(float ppmCompensated,
                             float ppmRaw,
+                            float gasVoltage,
                             float temperatureC,
                             float humidityPct,
                             const char* state,
@@ -354,6 +354,7 @@ bool uploadLatestToFirebase(float ppmCompensated,
                                  false,
                                  ppmCompensated,
                                  ppmRaw,
+                                 gasVoltage,
                                  temperatureC,
                                  humidityPct,
                                  state,
@@ -363,6 +364,7 @@ bool uploadLatestToFirebase(float ppmCompensated,
  
 bool uploadHistoryToFirebase(float ppmCompensated,
                              float ppmRaw,
+                             float gasVoltage,
                              float temperatureC,
                              float humidityPct,
                              const char* state,
@@ -372,6 +374,7 @@ bool uploadHistoryToFirebase(float ppmCompensated,
                                  true,
                                  ppmCompensated,
                                  ppmRaw,
+                                 gasVoltage,
                                  temperatureC,
                                  humidityPct,
                                  state,
@@ -407,27 +410,27 @@ void updateStatusLeds(unsigned long now) {
       break;
   }
 }
+
+void serviceAlarmControls(unsigned long now) {
+  handleAlarmCancelButton(now);
+  updateDangerAlarm(now);
+  updateStatusLeds(now);
+}
  
 void handleAlarmCancelButton(unsigned long now) {
-  const bool reading = digitalRead(kAlarmCancelButtonPin);
-  if (reading != gLastButtonReading) {
-    gLastButtonReading = reading;
-    gLastButtonChangeMs = now;
-  }
- 
-  if (now - gLastButtonChangeMs < kButtonDebounceMs || reading == gButtonStableState) {
+  const bool pressed = digitalRead(kAlarmCancelButtonPin) == LOW;
+  if (!pressed) {
+    gAlarmCancelButtonLatched = false;
     return;
   }
- 
-  gButtonStableState = reading;
-  if (gButtonStableState == LOW) {
-    if (gDangerAlarmActive) {
-      Serial.println("Detection paused by GPIO14 button for 10 seconds");
-      startDetectionPause(now);
-    } else {
-      Serial.println("GPIO14 button ignored because alarm is not active");
-    }
+
+  if (gAlarmCancelButtonLatched) {
+    return;
   }
+
+  gAlarmCancelButtonLatched = true;
+  Serial.println("GPIO14 button pressed: alarm stopped; gas detection paused for 10 seconds");
+  startDetectionPause(now);
 }
  
 GasLevel confirmGasLevel(GasLevel newLevel, bool extremeDanger) {
@@ -497,6 +500,7 @@ float readAnalogVoltage(int analogPin) {
   uint32_t total = 0;
   for (uint8_t i = 0; i < kGasSamplesPerRead; ++i) {
     total += analogRead(analogPin);
+    serviceAlarmControls(millis());
     delay(2);
   }
  
@@ -544,19 +548,13 @@ float gasDeltaMagnitude(const GasSensorState& sensor) {
 }
 
 GasLevel evaluateGasLevel(const GasSensorState& sensor) {
-  if (!sensor.baselineReady || sensor.baselineVoltage <= 0.01f) {
-    return GasLevel::Safe;
-  }
-
-  const float delta = gasDeltaMagnitude(sensor);
-  const float ratio = gasNormalizedRatio(sensor);
-  if (delta > sensor.extremeDeltaThresholdV || ratio > sensor.extremeRatioThreshold) {
+  if (sensor.voltage >= sensor.extremeVoltageThresholdV) {
     return GasLevel::Danger;
   }
-  if (delta > sensor.dangerDeltaThresholdV || ratio > sensor.dangerRatioThreshold) {
+  if (sensor.voltage >= sensor.dangerVoltageThresholdV) {
     return GasLevel::Danger;
   }
-  if (delta > sensor.warningDeltaThresholdV || ratio > sensor.warningRatioThreshold) {
+  if (sensor.voltage >= sensor.warningVoltageThresholdV) {
     return GasLevel::Warning;
   }
   return GasLevel::Safe;
@@ -566,10 +564,8 @@ void sampleGasSensor(GasSensorState& sensor) {
   sensor.raw = analogRead(sensor.analogPin);
   sensor.voltage = readAnalogVoltage(sensor.analogPin);
   updateGasBaseline(sensor);
-  const float delta = gasDeltaMagnitude(sensor);
-  const float ratio = gasNormalizedRatio(sensor);
   sensor.extreme = sensor.baselineReady &&
-                   (delta > sensor.extremeDeltaThresholdV || ratio > sensor.extremeRatioThreshold);
+                   sensor.voltage >= sensor.extremeVoltageThresholdV;
   sensor.level = evaluateGasLevel(sensor);
   sensor.detected = sensor.level == GasLevel::Danger;
 }
@@ -645,8 +641,7 @@ void setup() {
   pinMode(kAlarmOutputPin, OUTPUT);
   pinMode(kFanRelayPin, OUTPUT);
   pinMode(kAlarmCancelButtonPin, INPUT_PULLUP);
-  gLastButtonReading = digitalRead(kAlarmCancelButtonPin);
-  gButtonStableState = gLastButtonReading;
+  gAlarmCancelButtonLatched = false;
   setAlarmOutput(false);
   setFanRelay(false);
   runLedSelfTest();
@@ -686,7 +681,7 @@ void setup() {
  
   Serial.printf("%s test starting (A=GPIO%d)\r\n", gSen0565Sensor.name, gSen0565Sensor.analogPin);
   Serial.println("SEN0565 alarm contribution: enabled");
-  Serial.println("Keep SEN0565 in clean air for the first 30 seconds.");
+  Serial.println("Keep SEN0565 in clean air for the first 10 seconds.");
   Serial.println("Warm SEN0565 for at least 5 minutes before trusting its thresholds.");
  
   if (connectToWiFi()) {
@@ -698,9 +693,7 @@ void setup() {
  
 void loop() {
   const unsigned long now = millis();
-  handleAlarmCancelButton(now);
-  updateDangerAlarm(now);
-  updateStatusLeds(now);
+  serviceAlarmControls(now);
  
   if (now - gLastBlinkMs >= kBlinkIntervalMs) {
     gLastBlinkMs = now;
@@ -715,6 +708,9 @@ void loop() {
     float humidityPct = NAN;
     float pressureHpa = NAN;
     sampleGasSensor(gSen0565Sensor);
+    if (gDetectionPaused) {
+      return;
+    }
     gLastGasLevel = gGasLevel;
     gGasLevel = confirmGasLevel(gSen0565Sensor.level, gSen0565Sensor.extreme);
     gGasDetected = gGasLevel == GasLevel::Danger;
@@ -760,19 +756,25 @@ void loop() {
     const char* stateName = gasLevelName(gGasLevel);
     const bool fanOn = gDangerAlarmActive;
     const bool buzzerOn = gDangerAlarmActive;
+    const bool shouldUploadAlertHistory =
+        gGasLevel == GasLevel::Warning || gGasLevel == GasLevel::Danger;
  
     if (gWiFiConnected) {
       uploadLatestToFirebase(ppmCompensated,
                              ppmRaw,
+                             gSen0565Sensor.voltage,
                              temperatureC,
                              humidityPct,
                              stateName,
                              fanOn,
                              buzzerOn);
  
-      if (gLastFirebaseHistoryMs == 0 || now - gLastFirebaseHistoryMs >= kFirebaseHistoryIntervalMs) {
+      if (shouldUploadAlertHistory ||
+          gLastFirebaseHistoryMs == 0 ||
+          now - gLastFirebaseHistoryMs >= kFirebaseHistoryIntervalMs) {
         if (uploadHistoryToFirebase(ppmCompensated,
                                     ppmRaw,
+                                    gSen0565Sensor.voltage,
                                     temperatureC,
                                     humidityPct,
                                     stateName,

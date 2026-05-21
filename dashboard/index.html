@@ -26,6 +26,9 @@
     </div>
     <div class="topbar__right">
       <span class="topbar__sync" id="lastSync">Last sync: —</span>
+      <button class="notification-btn" type="button" id="enableNotificationsBtn" hidden>
+        Enable notifications
+      </button>
       <span class="status-badge safe" id="statusBadge">Safe</span>
     </div>
   </header>
@@ -38,9 +41,9 @@
   <!-- ── Metric cards ─────────────────────────────────────────────────────── -->
   <section class="metrics">
     <div class="card metric-card">
-      <p class="metric-card__label">Gas level (ppm)</p>
-      <p class="metric-card__value" id="ppmVal">— ppm</p>
-      <p class="metric-card__sub" id="ppmSub">LPG concentration</p>
+      <p class="metric-card__label">Gas voltage</p>
+      <p class="metric-card__value" id="ppmVal">— V</p>
+      <p class="metric-card__sub" id="ppmSub">Sensor output</p>
     </div>
     <div class="card metric-card">
       <p class="metric-card__label">Temperature</p>
@@ -55,7 +58,7 @@
     <div class="card metric-card">
       <p class="metric-card__label">Alerts today</p>
       <p class="metric-card__value" id="alertCount">0</p>
-      <p class="metric-card__sub">Warning + Danger events</p>
+      <p class="metric-card__sub">Warning + Danger + Extreme events</p>
     </div>
   </section>
  
@@ -65,7 +68,7 @@
     <!-- Live trend chart -->
     <div class="card chart-card">
       <div class="card__header">
-        <p class="card__title">Gas concentration — last 60 readings (live)</p>
+        <p class="card__title">Gas voltage — last 60 readings (live)</p>
         <button class="view-toggle-btn" type="button" id="showHistoryBtn">History</button>
       </div>
       <canvas id="trendChart"></canvas>
@@ -82,7 +85,7 @@
           <div class="device-row">
             <div>
               <p class="device-row__name">Exhaust fan</p>
-              <p class="device-row__sub">Relay — Danger state only</p>
+              <p class="device-row__sub">Relay — Danger / Extreme</p>
             </div>
             <span class="pill" id="fanState">off</span>
           </div>
@@ -90,7 +93,7 @@
           <div class="device-row">
             <div>
               <p class="device-row__name">Buzzer</p>
-              <p class="device-row__sub">Danger — 10s cycle / button</p>
+              <p class="device-row__sub">Danger / Extreme — 10s cycle / button</p>
             </div>
             <span class="pill" id="buzzerState">off</span>
           </div>
@@ -114,7 +117,7 @@
           <div class="device-row">
             <div>
               <p class="device-row__name">Red LED</p>
-              <p class="device-row__sub">Danger state indicator</p>
+              <p class="device-row__sub">Danger / Extreme indicator</p>
             </div>
             <span class="pill" id="redLed">off</span>
           </div>
@@ -162,7 +165,7 @@
           <thead>
             <tr>
               <th>Time</th>
-              <th>Gas (ppm)</th>
+              <th>Gas (V)</th>
               <th>Temp</th>
               <th>Humidity</th>
               <th>State</th>

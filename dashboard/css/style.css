@@ -30,6 +30,35 @@ body {
 .topbar__title { font-size: 16px; font-weight: 600; color: #111827; }
 .topbar__sub   { font-size: 12px; color: #6b7280; }
 .topbar__sync  { font-size: 12px; color: #9ca3af; }
+
+.notification-btn {
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: #3730a3;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 10px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.notification-btn:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+.notification-btn:focus-visible {
+  outline: 3px solid rgba(99, 102, 241, 0.25);
+  outline-offset: 2px;
+}
+.notification-btn:disabled {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #6b7280;
+  cursor: default;
+}
  
 /* ── Status badge ─────────────────────────────────────────────────────────── */
 .status-badge {
@@ -53,6 +82,7 @@ body {
 .status-badge.safe    { background: #d1fae5; color: #065f46; }
 .status-badge.warning { background: #fef3c7; color: #92400e; }
 .status-badge.danger  { background: #fee2e2; color: #991b1b; }
+.status-badge.extreme { background: #7f1d1d; color: #fff7ed; }
  
 /* ── State notification bar ───────────────────────────────────────────────── */
 .state-bar {
@@ -67,6 +97,7 @@ body {
 .state-bar.safe    { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
 .state-bar.warning { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
 .state-bar.danger  { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.state-bar.extreme { background: #7f1d1d; color: #fff7ed; border-color: #ef4444; }
  
 /* ── Card ─────────────────────────────────────────────────────────────────── */
 .card {
@@ -179,6 +210,7 @@ body {
 .pill--on      { background: #d1fae5; color: #065f46; }
 .pill--warning { background: #fef3c7; color: #92400e; }
 .pill--danger  { background: #fee2e2; color: #991b1b; }
+.pill--extreme { background: #7f1d1d; color: #fff7ed; }
  
 /* ── Alert log ────────────────────────────────────────────────────────────── */
 .alert-card  { flex: 1; }
@@ -205,6 +237,7 @@ body {
 }
 .alert-pill--warning { background: #fef3c7; color: #92400e; }
 .alert-pill--danger  { background: #fee2e2; color: #991b1b; }
+.alert-pill--extreme { background: #7f1d1d; color: #fff7ed; }
  
 /* ── 24hr history section ─────────────────────────────────────────────────── */
 .history-section {
@@ -268,6 +301,7 @@ body {
 .hist-badge--safe    { background: #d1fae5; color: #065f46; }
 .hist-badge--warning { background: #fef3c7; color: #92400e; }
 .hist-badge--danger  { background: #fee2e2; color: #991b1b; }
+.hist-badge--extreme { background: #7f1d1d; color: #fff7ed; }
  
 .history-empty {
   font-size: 12px;
@@ -278,10 +312,25 @@ body {
  
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  .topbar {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .topbar__right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
   .metrics   { grid-template-columns: repeat(2, 1fr); }
   .main-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
+  .topbar {
+    flex-direction: column;
+  }
+  .topbar__right {
+    justify-content: flex-start;
+    width: 100%;
+  }
   .metrics { grid-template-columns: 1fr; }
   .card__header {
     align-items: flex-start;
