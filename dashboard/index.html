@@ -60,11 +60,14 @@
   </section>
 
   <!-- ── Live main grid ───────────────────────────────────────────────────── -->
-  <div class="main-grid">
+  <div class="main-grid view-panel" id="liveView">
 
     <!-- Live trend chart -->
     <div class="card chart-card">
-      <p class="card__title">Gas concentration — last 60 readings (live)</p>
+      <div class="card__header">
+        <p class="card__title">Gas concentration — last 60 readings (live)</p>
+        <button class="view-toggle-btn" type="button" id="showHistoryBtn">History</button>
+      </div>
       <canvas id="trendChart"></canvas>
     </div>
 
@@ -139,11 +142,14 @@
   </div><!-- /.main-grid -->
 
   <!-- ── 24-hour history ──────────────────────────────────────────────────── -->
-  <div class="history-section">
+  <div class="history-section view-panel" id="historyView">
 
     <!-- 24hr chart -->
     <div class="card history-chart-card">
-      <p class="card__title">24-hour history — Gas · Temperature · Humidity</p>
+      <div class="card__header">
+        <p class="card__title">24-hour history — Gas · Temperature · Humidity</p>
+        <button class="view-toggle-btn" type="button" id="showLiveBtn">Live</button>
+      </div>
       <canvas id="historyChart"></canvas>
     </div>
 

@@ -213,6 +213,35 @@ function renderHistoryTable() {
   `).join('');
 }
 
+// ── UI — live/history view switch ──────────────────────────────────────────────
+
+function setupDashboardViews() {
+  const liveView = document.getElementById('liveView');
+  const historyView = document.getElementById('historyView');
+  const showHistoryBtn = document.getElementById('showHistoryBtn');
+  const showLiveBtn = document.getElementById('showLiveBtn');
+
+  function showView(view) {
+    const showingHistory = view === 'history';
+    liveView.hidden = showingHistory;
+    historyView.hidden = !showingHistory;
+
+    if (showingHistory && historyChart) {
+      historyChart.resize();
+      historyChart.update('none');
+    }
+
+    if (!showingHistory && trendChart) {
+      trendChart.resize();
+      trendChart.update('none');
+    }
+  }
+
+  showHistoryBtn.addEventListener('click', () => showView('history'));
+  showLiveBtn.addEventListener('click', () => showView('live'));
+  showView('live');
+}
+
 // ── Main update — called on every live reading ─────────────────────────────────
 
 function onNewReading(data) {
@@ -236,6 +265,7 @@ function onNewReading(data) {
 document.addEventListener('DOMContentLoaded', () => {
   initChart();         // live chart — charts.js
   initHistoryChart();  // 24hr chart — charts.js
+  setupDashboardViews();
 
   if (typeof listenToSensorData === 'function') {
     // Live readings → dashboard

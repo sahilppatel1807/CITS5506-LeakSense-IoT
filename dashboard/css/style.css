@@ -83,6 +83,40 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0.75rem;
+}
+.card__header .card__title { margin-bottom: 0; }
+
+.view-panel[hidden] { display: none; }
+
+.view-toggle-btn {
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 12px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.view-toggle-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+.view-toggle-btn:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.25);
+  outline-offset: 2px;
+}
 
 /* ── Metric cards ─────────────────────────────────────────────────────────── */
 .metrics {
@@ -249,4 +283,8 @@ body {
 }
 @media (max-width: 480px) {
   .metrics { grid-template-columns: 1fr; }
+  .card__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
