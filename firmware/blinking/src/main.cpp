@@ -360,21 +360,21 @@ void updateStatusLeds(unsigned long now) {
 void handleAlarmCancelButton(unsigned long now) {
   const bool reading = digitalRead(kAlarmCancelButtonPin);
   
-  // 如果状态没变，什么都不做
+  // If state hasn't changed, do nothing
   if (reading == gLastButtonReading) {
     return;
   }
   
-  // 状态变了，检查防抖时间是否足够
+  // State changed, check if debounce time has elapsed
   if (now - gLastButtonChangeMs < kButtonDebounceMs) {
     return;
   }
   
-  // 防抖通过，更新状态
+  // Debounce passed, update state
   gLastButtonReading = reading;
   gLastButtonChangeMs = now;
   
-  // 只在按下时触发（LOW）
+  // Trigger only when button is pressed (LOW)
   if (reading == LOW) {
     Serial.println("Detection paused by GPIO14 button for 10 seconds");
     startDetectionPause(now);
