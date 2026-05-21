@@ -50,8 +50,6 @@ body {
   border-radius: 50%;
   background: currentColor;
 }
-
-/* state colours */
 .status-badge.safe    { background: #d1fae5; color: #065f46; }
 .status-badge.warning { background: #fef3c7; color: #92400e; }
 .status-badge.danger  { background: #fee2e2; color: #991b1b; }
@@ -103,6 +101,7 @@ body {
   grid-template-columns: 1fr 340px;
   gap: 12px;
   align-items: start;
+  margin-bottom: 1rem;
 }
 
 /* ── Chart card ───────────────────────────────────────────────────────────── */
@@ -132,7 +131,7 @@ body {
 .device-row__name { font-size: 13px; color: #111827; }
 .device-row__sub  { font-size: 11px; color: #9ca3af; margin-top: 1px; }
 
-/* ── Pill ─────────────────────────────────────────────────────────────────── */
+/* ── Pills ────────────────────────────────────────────────────────────────── */
 .pill {
   display: inline-block;
   padding: 3px 11px;
@@ -143,10 +142,9 @@ body {
   color: #6b7280;
   transition: background 0.2s, color 0.2s;
 }
-.pill--on {
-  background: #d1fae5;
-  color: #065f46;
-}
+.pill--on      { background: #d1fae5; color: #065f46; }
+.pill--warning { background: #fef3c7; color: #92400e; }
+.pill--danger  { background: #fee2e2; color: #991b1b; }
 
 /* ── Alert log ────────────────────────────────────────────────────────────── */
 .alert-card  { flex: 1; }
@@ -174,12 +172,81 @@ body {
 .alert-pill--warning { background: #fef3c7; color: #92400e; }
 .alert-pill--danger  { background: #fee2e2; color: #991b1b; }
 
-/* ── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .metrics    { grid-template-columns: repeat(2, 1fr); }
-  .main-grid  { grid-template-columns: 1fr; }
+/* ── 24hr history section ─────────────────────────────────────────────────── */
+.history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
+.history-chart-card canvas {
+  width: 100% !important;
+  height: 240px !important;
+}
+
+/* ── History table ────────────────────────────────────────────────────────── */
+.history-table-wrap {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.history-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 500;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.history-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+.history-table tbody tr:last-child { border-bottom: none; }
+.history-table tbody tr:hover { background: #f9fafb; }
+.history-table tbody td {
+  padding: 8px 10px;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.hist-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.hist-badge--safe    { background: #d1fae5; color: #065f46; }
+.hist-badge--warning { background: #fef3c7; color: #92400e; }
+.hist-badge--danger  { background: #fee2e2; color: #991b1b; }
+
+.history-empty {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .metrics   { grid-template-columns: repeat(2, 1fr); }
+  .main-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 480px) {
   .metrics { grid-template-columns: 1fr; }
 }
