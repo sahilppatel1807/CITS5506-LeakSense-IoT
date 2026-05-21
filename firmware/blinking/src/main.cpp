@@ -6,62 +6,25 @@
 
 constexpr uint8_t kLedPin = D9;
 constexpr uint8_t kGreenLedPin = 17;
-constexpr uint8_t kRedLedPin = 4;
-constexpr uint8_t kYellowLedPin = 16;
-constexpr uint8_t kAlarmCancelButtonPin = 14;
+constexpr uint8_t kRedLedPin = 16;
 constexpr uint8_t kOledSdaPin = 18;
 constexpr uint8_t kOledSclPin = 23;
 constexpr uint8_t kBmeSdaPin = 22;
 constexpr uint8_t kBmeSclPin = 21;
-constexpr uint8_t kAlarmOutputPin = 25;
-constexpr uint8_t kFanRelayPin = 26;
-constexpr int kSen0565AnalogPin = 39;
+constexpr uint8_t kRelayPin = 25;
+constexpr int kMicsAnalogPin = 36;
 constexpr uint8_t kScreenWidth = 128;
 constexpr uint8_t kScreenHeight = 64;
 constexpr uint8_t kOledAddresses[] = {0x3C, 0x3D};
 constexpr uint8_t kBmeAddresses[] = {0x76, 0x77};
-constexpr uint8_t kGasSamplesPerRead = 32;
+constexpr uint8_t kMicsSamplesPerRead = 32;
 constexpr unsigned long kBlinkIntervalMs = 500;
-constexpr unsigned long kRedBlinkIntervalMs = 500;
+constexpr unsigned long kAlarmBlinkIntervalMs = 250;
 constexpr unsigned long kSensorReadIntervalMs = 2000;
-constexpr unsigned long kGasBaselineDurationMs = 10000;
-constexpr unsigned long kLedSelfTestIntervalMs = 500;
-constexpr unsigned long kDangerAlarmDurationMs = 10000;
-constexpr unsigned long kDetectionPauseDurationMs = 10000;
-constexpr unsigned long kButtonDebounceMs = 50;
-constexpr float kSen0565WarningDeltaThresholdV = 0.55f;
-constexpr float kSen0565WarningRatioThreshold = 2.20f;
-constexpr float kSen0565DangerDeltaThresholdV = 0.75f;
-constexpr float kSen0565DangerRatioThreshold = 2.60f;
-constexpr float kSen0565ExtremeDeltaThresholdV = 1.20f;
-constexpr float kSen0565ExtremeRatioThreshold = 4.00f;
-constexpr uint8_t kGasLevelConfirmReads = 2;
-constexpr bool kAlarmOutputActiveLow = true;
-constexpr bool kFanRelayActiveLow = true;
-
-enum class GasLevel {
-  Safe,
-  Warning,
-  Danger,
-};
-
-struct GasSensorState {
-  const char* name;
-  int analogPin;
-  float warningDeltaThresholdV;
-  float warningRatioThreshold;
-  float dangerDeltaThresholdV;
-  float dangerRatioThreshold;
-  float extremeDeltaThresholdV;
-  float extremeRatioThreshold;
-  float baselineVoltage;
-  bool baselineReady;
-  int raw;
-  float voltage;
-  GasLevel level;
-  bool extreme;
-  bool detected;
-};
+constexpr unsigned long kMicsBaselineDurationMs = 10000;
+constexpr float kMicsGasDeltaThresholdV = 0.25f;
+constexpr float kMicsGasRatioThreshold = 1.40f;
+constexpr bool kRelayActiveLow = true;
 
 TwoWire gOledWire = TwoWire(0);
 TwoWire gBmeWire = TwoWire(1);
@@ -72,232 +35,36 @@ bool gDisplayReady = false;
 bool gBmeReady = false;
 uint8_t gDisplayAddress = 0;
 uint8_t gBmeAddress = 0;
+float gMicsBaselineVoltage = 0.0f;
+bool gMicsBaselineReady = false;
 bool gLedOn = false;
+bool gAlarmLedOn = false;
 bool gGasDetected = false;
-bool gDangerAlarmActive = false;
-bool gDetectionPaused = false;
-bool gRedBlinkOn = false;
-bool gGreenBlinkOn = false;
-bool gLastButtonReading = HIGH;
-bool gButtonStableState = HIGH;
-GasLevel gGasLevel = GasLevel::Safe;
-GasLevel gLastGasLevel = GasLevel::Safe;
-GasLevel gPendingGasLevel = GasLevel::Safe;
-uint8_t gPendingGasLevelCount = 0;
 unsigned long gStartMs = 0;
 unsigned long gLastBlinkMs = 0;
-unsigned long gLastRedBlinkMs = 0;
-unsigned long gLastGreenBlinkMs = 0;
+unsigned long gLastAlarmBlinkMs = 0;
 unsigned long gLastSensorReadMs = 0;
-unsigned long gDangerAlarmStartMs = 0;
-unsigned long gDetectionPauseStartMs = 0;
-unsigned long gLastButtonChangeMs = 0;
-GasSensorState gSen0565Sensor = {"SEN0565",
-                                 kSen0565AnalogPin,
-                                 kSen0565WarningDeltaThresholdV,
-                                 kSen0565WarningRatioThreshold,
-                                 kSen0565DangerDeltaThresholdV,
-                                 kSen0565DangerRatioThreshold,
-                                 kSen0565ExtremeDeltaThresholdV,
-                                 kSen0565ExtremeRatioThreshold,
-                                 0.0f,
-                                 false,
-                                 0,
-                                 0.0f,
-                                 GasLevel::Safe,
-                                 false,
-                                 false};
 
-const char* gasLevelName(GasLevel level) {
-  switch (level) {
-    case GasLevel::Danger:
-      return "DANGER";
-    case GasLevel::Warning:
-      return "WARNING";
-    case GasLevel::Safe:
-    default:
-      return "SAFE";
-  }
-}
-
-void setAlarmOutput(bool enabled) {
-  const uint8_t activeState = kAlarmOutputActiveLow ? LOW : HIGH;
-  const uint8_t inactiveState = kAlarmOutputActiveLow ? HIGH : LOW;
-  digitalWrite(kAlarmOutputPin, enabled ? activeState : inactiveState);
-}
-
-void setFanRelay(bool enabled) {
-  const uint8_t activeState = kFanRelayActiveLow ? LOW : HIGH;
-  const uint8_t inactiveState = kFanRelayActiveLow ? HIGH : LOW;
-  digitalWrite(kFanRelayPin, enabled ? activeState : inactiveState);
-}
-
-void setStatusLeds(bool greenOn, bool redOn, bool yellowOn);
-
-void startDangerAlarm(unsigned long now) {
-  gDangerAlarmActive = true;
-  gDangerAlarmStartMs = now;
-  gRedBlinkOn = true;
-  gLastRedBlinkMs = now;
-  setAlarmOutput(true);
-  setFanRelay(true);
-}
-
-void stopDangerAlarm() {
-  gDangerAlarmActive = false;
-  gGasDetected = false;
-  gGasLevel = GasLevel::Safe;
-  gPendingGasLevel = GasLevel::Safe;
-  gPendingGasLevelCount = 0;
-  gRedBlinkOn = false;
-  setAlarmOutput(false);
-  setFanRelay(false);
-  setStatusLeds(true, false, false);
-}
-
-void startDetectionPause(unsigned long now) {
-  stopDangerAlarm();
-  gDetectionPaused = true;
-  gDetectionPauseStartMs = now;
-  gGreenBlinkOn = true;
-  gLastGreenBlinkMs = now;
-  setStatusLeds(true, false, false);
-}
-
-void updateDetectionPause(unsigned long now) {
-  if (!gDetectionPaused) {
-    return;
-  }
-
-  if (now - gDetectionPauseStartMs >= kDetectionPauseDurationMs) {
-    gDetectionPaused = false;
-    gGreenBlinkOn = false;
-    gLastSensorReadMs = 0;
-    Serial.println("Detection pause ended; monitoring resumed");
-    return;
-  }
-
-  if (now - gLastGreenBlinkMs >= kBlinkIntervalMs) {
-    gLastGreenBlinkMs = now;
-    gGreenBlinkOn = !gGreenBlinkOn;
-  }
-  setStatusLeds(gGreenBlinkOn, false, false);
-}
-
-void updateDangerAlarm(unsigned long now) {
-  if (!gDangerAlarmActive) {
-    setAlarmOutput(false);
-    setFanRelay(false);
-    return;
-  }
-
-  if (now - gDangerAlarmStartMs >= kDangerAlarmDurationMs) {
-    stopDangerAlarm();
-    return;
-  }
-
-  setAlarmOutput(true);
-  setFanRelay(true);
-}
-
-void setStatusLeds(bool greenOn, bool redOn, bool yellowOn) {
-  digitalWrite(kGreenLedPin, greenOn ? HIGH : LOW);
-  digitalWrite(kRedLedPin, redOn ? HIGH : LOW);
-  digitalWrite(kYellowLedPin, yellowOn ? HIGH : LOW);
-}
-
-void runLedSelfTest() {
-  setStatusLeds(false, false, false);
-  delay(100);
-  Serial.println("LED self-test: green -> yellow -> red");
-
-  setStatusLeds(true, false, false);
-  delay(kLedSelfTestIntervalMs);
-  setStatusLeds(false, false, true);
-  delay(kLedSelfTestIntervalMs);
-  setStatusLeds(false, true, false);
-  delay(kLedSelfTestIntervalMs);
-  setStatusLeds(false, false, false);
+void setRelayAlarm(bool enabled) {
+  const uint8_t activeState = kRelayActiveLow ? LOW : HIGH;
+  const uint8_t inactiveState = kRelayActiveLow ? HIGH : LOW;
+  digitalWrite(kRelayPin, enabled ? activeState : inactiveState);
 }
 
 void updateStatusLeds(unsigned long now) {
-  if (gDetectionPaused) {
-    updateDetectionPause(now);
+  if (!gGasDetected) {
+    gAlarmLedOn = false;
+    digitalWrite(kGreenLedPin, HIGH);
+    digitalWrite(kRedLedPin, LOW);
     return;
   }
 
-  if (gDangerAlarmActive) {
-    if (now - gLastRedBlinkMs >= kRedBlinkIntervalMs) {
-      gLastRedBlinkMs = now;
-      gRedBlinkOn = !gRedBlinkOn;
-    }
-    setStatusLeds(false, gRedBlinkOn, false);
-    return;
+  digitalWrite(kGreenLedPin, LOW);
+  if (now - gLastAlarmBlinkMs >= kAlarmBlinkIntervalMs) {
+    gLastAlarmBlinkMs = now;
+    gAlarmLedOn = !gAlarmLedOn;
+    digitalWrite(kRedLedPin, gAlarmLedOn ? HIGH : LOW);
   }
-
-  switch (gGasLevel) {
-    case GasLevel::Danger:
-      setStatusLeds(false, true, false);
-      break;
-    case GasLevel::Warning:
-      setStatusLeds(false, false, true);
-      break;
-    case GasLevel::Safe:
-    default:
-      setStatusLeds(true, false, false);
-      break;
-  }
-}
-
-void handleAlarmCancelButton(unsigned long now) {
-  const bool reading = digitalRead(kAlarmCancelButtonPin);
-  if (reading != gLastButtonReading) {
-    gLastButtonReading = reading;
-    gLastButtonChangeMs = now;
-  }
-
-  if (now - gLastButtonChangeMs < kButtonDebounceMs || reading == gButtonStableState) {
-    return;
-  }
-
-  gButtonStableState = reading;
-  if (gButtonStableState == LOW) {
-    Serial.println("Detection paused by GPIO14 button for 10 seconds");
-    startDetectionPause(now);
-  }
-}
-
-GasLevel confirmGasLevel(GasLevel newLevel, bool extremeDanger) {
-  if (newLevel == GasLevel::Safe) {
-    gPendingGasLevel = GasLevel::Safe;
-    gPendingGasLevelCount = 0;
-    return GasLevel::Safe;
-  }
-
-  if (newLevel == GasLevel::Warning) {
-    gPendingGasLevel = GasLevel::Warning;
-    gPendingGasLevelCount = 0;
-    return GasLevel::Warning;
-  }
-
-  if (extremeDanger) {
-    gPendingGasLevel = GasLevel::Danger;
-    gPendingGasLevelCount = 0;
-    return GasLevel::Danger;
-  }
-
-  if (gPendingGasLevel != GasLevel::Danger) {
-    gPendingGasLevel = GasLevel::Danger;
-    gPendingGasLevelCount = 1;
-  } else if (gPendingGasLevelCount < kGasLevelConfirmReads) {
-    ++gPendingGasLevelCount;
-  }
-  if (gPendingGasLevelCount >= kGasLevelConfirmReads) {
-    gPendingGasLevelCount = 0;
-    return GasLevel::Danger;
-  }
-
-  return GasLevel::Warning;
 }
 
 void scanI2CBus(TwoWire& bus, const char* label) {
@@ -330,119 +97,78 @@ bool initBme() {
   return false;
 }
 
-float readAnalogVoltage(int analogPin) {
+float readMicsVoltage() {
   uint32_t total = 0;
-  for (uint8_t i = 0; i < kGasSamplesPerRead; ++i) {
-    total += analogRead(analogPin);
+  for (uint8_t i = 0; i < kMicsSamplesPerRead; ++i) {
+    total += analogRead(kMicsAnalogPin);
     delay(2);
   }
 
-  const float raw = total / static_cast<float>(kGasSamplesPerRead);
+  const float raw = total / static_cast<float>(kMicsSamplesPerRead);
   return raw * 3.3f / 4095.0f;
 }
 
-void updateGasBaseline(GasSensorState& sensor) {
-  if (sensor.baselineReady) {
+void updateMicsBaseline(float voltage) {
+  if (gMicsBaselineReady) {
     return;
   }
 
-  if (sensor.baselineVoltage <= 0.0f) {
-    sensor.baselineVoltage = sensor.voltage;
+  if (gMicsBaselineVoltage <= 0.0f) {
+    gMicsBaselineVoltage = voltage;
   } else {
-    sensor.baselineVoltage = (sensor.baselineVoltage * 0.85f) + (sensor.voltage * 0.15f);
+    gMicsBaselineVoltage = (gMicsBaselineVoltage * 0.85f) + (voltage * 0.15f);
   }
 
-  if (millis() - gStartMs >= kGasBaselineDurationMs) {
-    sensor.baselineReady = true;
-    Serial.printf("%s baseline ready: %.3f V\r\n", sensor.name, sensor.baselineVoltage);
+  if (millis() - gStartMs >= kMicsBaselineDurationMs) {
+    gMicsBaselineReady = true;
+    Serial.printf("MiCS-5524 baseline ready: %.3f V\r\n", gMicsBaselineVoltage);
   }
 }
 
-float gasRatio(const GasSensorState& sensor) {
-  return sensor.baselineVoltage > 0.01f ? sensor.voltage / sensor.baselineVoltage : 0.0f;
-}
-
-GasLevel evaluateGasLevel(const GasSensorState& sensor) {
-  if (!sensor.baselineReady || sensor.baselineVoltage <= 0.01f) {
-    return GasLevel::Safe;
+bool isMicsGasDetected(float voltage) {
+  if (!gMicsBaselineReady || gMicsBaselineVoltage <= 0.01f) {
+    return false;
   }
 
-  const float delta = sensor.voltage - sensor.baselineVoltage;
-  const float ratio = gasRatio(sensor);
-  if (delta > sensor.extremeDeltaThresholdV || ratio > sensor.extremeRatioThreshold) {
-    return GasLevel::Danger;
-  }
-  if (delta > sensor.dangerDeltaThresholdV || ratio > sensor.dangerRatioThreshold) {
-    return GasLevel::Danger;
-  }
-  if (delta > sensor.warningDeltaThresholdV || ratio > sensor.warningRatioThreshold) {
-    return GasLevel::Warning;
-  }
-  return GasLevel::Safe;
-}
-
-void sampleGasSensor(GasSensorState& sensor) {
-  sensor.raw = analogRead(sensor.analogPin);
-  sensor.voltage = readAnalogVoltage(sensor.analogPin);
-  updateGasBaseline(sensor);
-  const float delta = sensor.voltage - sensor.baselineVoltage;
-  const float ratio = gasRatio(sensor);
-  sensor.extreme = sensor.baselineReady &&
-                   (delta > sensor.extremeDeltaThresholdV || ratio > sensor.extremeRatioThreshold);
-  sensor.level = evaluateGasLevel(sensor);
-  sensor.detected = sensor.level == GasLevel::Danger;
-}
-
-void printGasSensor(const GasSensorState& sensor) {
-  if (sensor.baselineReady) {
-    const float delta = sensor.voltage - sensor.baselineVoltage;
-    Serial.printf("%s -> raw=%d, V=%.3f, baseline=%.3f, delta=%+.3f, ratio=%.2f, state=%s, extreme=%s\r\n",
-                  sensor.name,
-                  sensor.raw,
-                  sensor.voltage,
-                  sensor.baselineVoltage,
-                  delta,
-                  gasRatio(sensor),
-                  gasLevelName(sensor.level),
-                  sensor.extreme ? "YES" : "no");
-  } else {
-    Serial.printf("%s baselining -> raw=%d, V=%.3f\r\n",
-                  sensor.name,
-                  sensor.raw,
-                  sensor.voltage);
-  }
+  const float delta = voltage - gMicsBaselineVoltage;
+  const float ratio = voltage / gMicsBaselineVoltage;
+  return delta > kMicsGasDeltaThresholdV || ratio > kMicsGasRatioThreshold;
 }
 
 void drawStatusScreen(float temperatureC,
                       float humidityPct,
                       float pressureHpa,
-                      const GasSensorState& sensor,
-                      GasLevel confirmedLevel,
-                      bool gasDetected,
-                      bool fanOn) {
+                      int micsRaw,
+                      float micsVoltage,
+                      bool gasDetected) {
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println("LeakSense SEN0565");
+  display.println("LeakSense Test");
 
   if (gBmeReady) {
-    display.printf("T:%.1fC H:%.0f%% P:%.0f\r\n", temperatureC, humidityPct, pressureHpa);
+    display.printf("T:%.1fC H:%.1f%%\r\n", temperatureC, humidityPct);
+    display.printf("P: %.1f hPa\r\n", pressureHpa);
   } else {
     display.println("BME280 not found");
+    display.printf("BME SDA:%u SCL:%u\r\n", kBmeSdaPin, kBmeSclPin);
   }
 
-  display.printf("Raw:%4d V:%.2f\r\n", sensor.raw, sensor.voltage);
-  if (sensor.baselineReady) {
-    display.printf("Base:%.2f R:%.2f\r\n", sensor.baselineVoltage, gasRatio(sensor));
-    display.printf("State:%s\r\n", gasLevelName(confirmedLevel));
-    display.printf("Alarm:%s Fan:%s\r\n", gasDetected ? "ON" : "off", fanOn ? "ON" : "off");
+  display.printf("MiCS raw: %d\r\n", micsRaw);
+  display.printf("MiCS V: %.3f\r\n", micsVoltage);
+
+  if (gMicsBaselineReady) {
+    const float ratio = gMicsBaselineVoltage > 0.01f ? micsVoltage / gMicsBaselineVoltage : 0.0f;
+    display.printf("Base: %.3f R:%.2f\r\n", gMicsBaselineVoltage, ratio);
+    display.printf("Gas: %s Alarm:%s\r\n", gasDetected ? "YES" : "no", gasDetected ? "ON" : "off");
   } else {
     const unsigned long elapsedMs = millis() - gStartMs;
     const unsigned long cappedElapsedMs =
-        elapsedMs > kGasBaselineDurationMs ? kGasBaselineDurationMs : elapsedMs;
-    const unsigned long remainingSec = (kGasBaselineDurationMs - cappedElapsedMs) / 1000;
-    display.println("Baselining SEN0565");
+        elapsedMs > kMicsBaselineDurationMs ? kMicsBaselineDurationMs : elapsedMs;
+    const unsigned long remainingSec = (kMicsBaselineDurationMs - cappedElapsedMs) / 1000;
+    display.println("Calibrating MiCS...");
+    display.println("Reading baseline");
     display.printf("Time left: %lus\r\n", remainingSec);
   }
 
@@ -454,20 +180,18 @@ void setup() {
   pinMode(kLedPin, OUTPUT);
   pinMode(kGreenLedPin, OUTPUT);
   pinMode(kRedLedPin, OUTPUT);
-  pinMode(kYellowLedPin, OUTPUT);
-  pinMode(kAlarmOutputPin, OUTPUT);
-  pinMode(kFanRelayPin, OUTPUT);
-  pinMode(kAlarmCancelButtonPin, INPUT_PULLUP);
-  gLastButtonReading = digitalRead(kAlarmCancelButtonPin);
-  gButtonStableState = gLastButtonReading;
-  setAlarmOutput(false);
-  setFanRelay(false);
-  runLedSelfTest();
+  pinMode(kRelayPin, OUTPUT);
   updateStatusLeds(millis());
+  setRelayAlarm(false);
   analogReadResolution(12);
-  analogSetPinAttenuation(kSen0565AnalogPin, ADC_11db);
+  analogSetPinAttenuation(kMicsAnalogPin, ADC_11db);
   gStartMs = millis();
   delay(200);
+
+  Serial.println("Relay self-test on GPIO25");
+  setRelayAlarm(true);
+  delay(500);
+  setRelayAlarm(false);
 
   Serial.printf("OLED test starting (SDA=%u, SCL=%u)\r\n", kOledSdaPin, kOledSclPin);
   gOledWire.begin(kOledSdaPin, kOledSclPin);
@@ -491,17 +215,12 @@ void setup() {
     Serial.println("BME280 init failed. Check VCC/GND/SDA/SCL and ADR/CS pins.");
   }
 
-  Serial.printf("%s test starting (A=GPIO%d)\r\n", gSen0565Sensor.name, gSen0565Sensor.analogPin);
-  Serial.println("SEN0565 alarm contribution: enabled");
-  Serial.println("Keep SEN0565 in clean air for the first 10 seconds.");
-  Serial.println("Warm SEN0565 for at least 5 minutes before trusting its thresholds.");
+  Serial.printf("MiCS-5524 test starting (AO=GPIO%d)\r\n", kMicsAnalogPin);
+  Serial.println("Keep MiCS-5524 in clean air for the first 10 seconds.");
 }
 
 void loop() {
   const unsigned long now = millis();
-  handleAlarmCancelButton(now);
-  updateDetectionPause(now);
-  updateDangerAlarm(now);
   updateStatusLeds(now);
 
   if (now - gLastBlinkMs >= kBlinkIntervalMs) {
@@ -510,21 +229,17 @@ void loop() {
     digitalWrite(kLedPin, gLedOn ? HIGH : LOW);
   }
 
-  if (!gDetectionPaused && now - gLastSensorReadMs >= kSensorReadIntervalMs) {
+  if (now - gLastSensorReadMs >= kSensorReadIntervalMs) {
     gLastSensorReadMs = now;
 
     float temperatureC = NAN;
     float humidityPct = NAN;
     float pressureHpa = NAN;
-    sampleGasSensor(gSen0565Sensor);
-    gLastGasLevel = gGasLevel;
-    gGasLevel = confirmGasLevel(gSen0565Sensor.level, gSen0565Sensor.extreme);
-    gGasDetected = gGasLevel == GasLevel::Danger;
-    if (gGasDetected && gLastGasLevel != GasLevel::Danger) {
-      startDangerAlarm(now);
-    }
-    updateDangerAlarm(now);
-    updateStatusLeds(now);
+    const int micsRaw = analogRead(kMicsAnalogPin);
+    const float micsVoltage = readMicsVoltage();
+    updateMicsBaseline(micsVoltage);
+    gGasDetected = isMicsGasDetected(micsVoltage);
+    setRelayAlarm(gGasDetected);
 
     if (gBmeReady) {
       temperatureC = gBme.readTemperature();
@@ -537,21 +252,22 @@ void loop() {
       Serial.println("BME280 not ready");
     }
 
-    printGasSensor(gSen0565Sensor);
-    Serial.printf("Alarm source -> SEN0565 raw=%s, confirmed=%s, alarm=%s, fan=%s\r\n",
-                  gasLevelName(gSen0565Sensor.level),
-                  gasLevelName(gGasLevel),
-                  gDangerAlarmActive ? "ON" : "off",
-                  gDangerAlarmActive ? "ON" : "off");
+    if (gMicsBaselineReady) {
+      const float delta = micsVoltage - gMicsBaselineVoltage;
+      const float ratio = gMicsBaselineVoltage > 0.01f ? micsVoltage / gMicsBaselineVoltage : 0.0f;
+      Serial.printf("MiCS-5524 -> raw=%d, V=%.3f, baseline=%.3f, delta=%+.3f, ratio=%.2f, gas=%s\r\n",
+                    micsRaw,
+                    micsVoltage,
+                    gMicsBaselineVoltage,
+                    delta,
+                    ratio,
+                    gGasDetected ? "YES" : "no");
+    } else {
+      Serial.printf("MiCS-5524 baselining -> raw=%d, V=%.3f\r\n", micsRaw, micsVoltage);
+    }
 
     if (gDisplayReady) {
-      drawStatusScreen(temperatureC,
-                       humidityPct,
-                       pressureHpa,
-                       gSen0565Sensor,
-                       gGasLevel,
-                       gDangerAlarmActive,
-                       gDangerAlarmActive);
+      drawStatusScreen(temperatureC, humidityPct, pressureHpa, micsRaw, micsVoltage, gGasDetected);
     }
   }
 }
