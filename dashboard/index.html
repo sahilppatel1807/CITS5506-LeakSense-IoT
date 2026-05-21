@@ -38,9 +38,9 @@
   <!-- ── Metric cards ─────────────────────────────────────────────────────── -->
   <section class="metrics">
     <div class="card metric-card">
-      <p class="metric-card__label">Gas level (ppm)</p>
-      <p class="metric-card__value" id="ppmVal">— ppm</p>
-      <p class="metric-card__sub" id="ppmSub">LPG concentration</p>
+      <p class="metric-card__label">Gas voltage</p>
+      <p class="metric-card__value" id="ppmVal">— V</p>
+      <p class="metric-card__sub" id="ppmSub">Sensor output</p>
     </div>
     <div class="card metric-card">
       <p class="metric-card__label">Temperature</p>
@@ -65,7 +65,7 @@
     <!-- Live trend chart -->
     <div class="card chart-card">
       <div class="card__header">
-        <p class="card__title">Gas concentration — last 60 readings (live)</p>
+        <p class="card__title">Gas voltage — last 60 readings (live)</p>
         <button class="view-toggle-btn" type="button" id="showHistoryBtn">History</button>
       </div>
       <canvas id="trendChart"></canvas>
@@ -162,7 +162,7 @@
           <thead>
             <tr>
               <th>Time</th>
-              <th>Gas (ppm)</th>
+              <th>Gas (V)</th>
               <th>Temp</th>
               <th>Humidity</th>
               <th>State</th>

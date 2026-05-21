@@ -2,11 +2,12 @@
  * charts.js
  * Manages two Chart.js charts:
  *  - trendChart  : live readings, last 60 points
- *  - historyChart: 24-hour ppm + temperature + humidity
+ *  - historyChart: 24-hour voltage + temperature + humidity
  */
 
-const THRESHOLD_WARNING = 300;
-const THRESHOLD_DANGER  = 500;
+const THRESHOLD_WARNING_V = 0.12;
+const THRESHOLD_DANGER_V  = 0.22;
+const THRESHOLD_EXTREME_V = 0.35;
 const MAX_LIVE_POINTS   = 60;
 
 let trendChart   = null;
@@ -23,7 +24,7 @@ function initChart() {
       labels:   [],
       datasets: [
         {
-          label:            'Gas (ppm)',
+          label:            'Gas (V)',
           data:             [],
           borderColor:      '#3b82f6',
           backgroundColor:  'rgba(59,130,246,0.07)',
@@ -34,7 +35,7 @@ function initChart() {
           fill:             true,
         },
         {
-          label:       'Warning (300 ppm)',
+          label:       'Warning (0.12 V)',
           data:        [],
           borderColor: 'rgba(217,119,6,0.6)',
           borderWidth: 1,
@@ -43,9 +44,18 @@ function initChart() {
           fill:        false,
         },
         {
-          label:       'Danger (500 ppm)',
+          label:       'Danger (0.22 V)',
           data:        [],
           borderColor: 'rgba(185,28,28,0.6)',
+          borderWidth: 1,
+          borderDash:  [5,4],
+          pointRadius: 0,
+          fill:        false,
+        },
+        {
+          label:       'Extreme (0.35 V)',
+          data:        [],
+          borderColor: 'rgba(127,29,29,0.6)',
           borderWidth: 1,
           borderDash:  [5,4],
           pointRadius: 0,
@@ -62,7 +72,7 @@ function initChart() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.datasetIndex === 0 ? `${Math.round(ctx.raw)} ppm` : null,
+            label: ctx => ctx.datasetIndex === 0 ? `${Number(ctx.raw).toFixed(2)} V` : null,
           },
         },
       },
@@ -75,7 +85,7 @@ function initChart() {
         },
         y: {
           min:    0,
-          max:    750,
+          max:    0.6,
           ticks:  { font: { size: 10 }, color: '#9ca3af', maxTicksLimit: 6 },
           grid:   { color: '#f3f4f6' },
           border: { display: false },
@@ -85,17 +95,18 @@ function initChart() {
   });
 }
 
-function updateChart(ppm, time) {
-  const [gasData, warnData, dangerData] = trendChart.data.datasets.map(d => d.data);
+function updateChart(voltage, time) {
+  const [gasData, warnData, dangerData, extremeData] = trendChart.data.datasets.map(d => d.data);
   const labels = trendChart.data.labels;
 
-  gasData.push(ppm);
-  warnData.push(THRESHOLD_WARNING);
-  dangerData.push(THRESHOLD_DANGER);
+  gasData.push(voltage);
+  warnData.push(THRESHOLD_WARNING_V);
+  dangerData.push(THRESHOLD_DANGER_V);
+  extremeData.push(THRESHOLD_EXTREME_V);
   labels.push(time);
 
   if (gasData.length > MAX_LIVE_POINTS) {
-    gasData.shift(); warnData.shift(); dangerData.shift(); labels.shift();
+    gasData.shift(); warnData.shift(); dangerData.shift(); extremeData.shift(); labels.shift();
   }
 
   trendChart.update('none');
@@ -118,7 +129,7 @@ function initHistoryChart() {
       labels:   [],
       datasets: [
         {
-          label:            'Gas (ppm)',
+          label:            'Gas (V)',
           data:             [],
           borderColor:      '#3b82f6',
           backgroundColor:  'rgba(59,130,246,0.08)',
@@ -127,7 +138,7 @@ function initHistoryChart() {
           pointHoverRadius: 5,
           tension:          0.35,
           fill:             true,
-          yAxisID:          'yPpm',
+          yAxisID:          'yGas',
         },
         {
           label:            'Temp (°C)',
@@ -152,24 +163,34 @@ function initHistoryChart() {
           yAxisID:          'yEnv',
         },
         {
-          label:       'Warning (300 ppm)',
+          label:       'Warning (0.12 V)',
           data:        [],
           borderColor: 'rgba(217,119,6,0.5)',
           borderWidth: 1,
           borderDash:  [5,4],
           pointRadius: 0,
           fill:        false,
-          yAxisID:     'yPpm',
+          yAxisID:     'yGas',
         },
         {
-          label:       'Danger (500 ppm)',
+          label:       'Danger (0.22 V)',
           data:        [],
           borderColor: 'rgba(185,28,28,0.5)',
           borderWidth: 1,
           borderDash:  [5,4],
           pointRadius: 0,
           fill:        false,
-          yAxisID:     'yPpm',
+          yAxisID:     'yGas',
+        },
+        {
+          label:       'Extreme (0.35 V)',
+          data:        [],
+          borderColor: 'rgba(127,29,29,0.5)',
+          borderWidth: 1,
+          borderDash:  [5,4],
+          pointRadius: 0,
+          fill:        false,
+          yAxisID:     'yGas',
         },
       ],
     },
@@ -187,7 +208,7 @@ function initHistoryChart() {
         tooltip: {
           callbacks: {
             label: ctx => {
-              if (ctx.datasetIndex === 0) return `Gas: ${Math.round(ctx.raw)} ppm`;
+              if (ctx.datasetIndex === 0) return `Gas: ${Number(ctx.raw).toFixed(2)} V`;
               if (ctx.datasetIndex === 1) return `Temp: ${ctx.raw.toFixed(1)}°C`;
               if (ctx.datasetIndex === 2) return `Humidity: ${ctx.raw.toFixed(1)}%`;
               return null;
@@ -202,12 +223,12 @@ function initHistoryChart() {
           grid:    { display: false },
           border:  { display: false },
         },
-        yPpm: {
+        yGas: {
           type:     'linear',
           position: 'left',
           min:      0,
-          max:      750,
-          title:    { display: true, text: 'Gas (ppm)', color: '#3b82f6', font: { size: 11 } },
+          max:      0.6,
+          title:    { display: true, text: 'Gas (V)', color: '#3b82f6', font: { size: 11 } },
           ticks:    { font: { size: 10 }, color: '#9ca3af' },
           grid:     { color: '#f3f4f6' },
           border:   { display: false },
@@ -236,13 +257,14 @@ function addHistoryPoint(reading) {
   const date   = new Date(reading.timestamp);
   const label  = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-  const [ppmDs, tempDs, humDs, warnDs, dangerDs] = historyChart.data.datasets;
+  const [gasDs, tempDs, humDs, warnDs, dangerDs, extremeDs] = historyChart.data.datasets;
 
-  ppmDs.data.push(reading.ppm_compensated);
+  gasDs.data.push(reading.voltage);
   tempDs.data.push(reading.temperature);
   humDs.data.push(reading.humidity);
-  warnDs.data.push(THRESHOLD_WARNING);
-  dangerDs.data.push(THRESHOLD_DANGER);
+  warnDs.data.push(THRESHOLD_WARNING_V);
+  dangerDs.data.push(THRESHOLD_DANGER_V);
+  extremeDs.data.push(THRESHOLD_EXTREME_V);
   historyChart.data.labels.push(label);
 
   historyChart.update('none');

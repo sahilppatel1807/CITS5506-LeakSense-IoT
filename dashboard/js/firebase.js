@@ -34,11 +34,13 @@ function booleanFrom(value) {
 
 function normaliseReading(data) {
   const ppm   = numberFrom(data.ppm_compensated, data.ppm, data.gas_ppm, data.gas, data.value);
+  const voltage = numberFrom(data.voltage, data.gas_voltage, data.voltage_v, data.sensor_voltage);
   const state = String(data.state || getStateFromPpm(ppm)).toLowerCase();
 
   return {
     ppm_compensated: Math.round(ppm),
     ppm_raw:         Math.round(numberFrom(data.ppm_raw, data.raw_ppm, ppm)),
+    voltage:         voltage > 0 ? voltage : gasVoltageFromPpm(ppm),
     temperature:     numberFrom(data.temperature, data.temp),
     humidity:        numberFrom(data.humidity, data.hum),
     state,

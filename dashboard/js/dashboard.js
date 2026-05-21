@@ -4,8 +4,13 @@
  * Handles live readings, alert log, 24hr history table, and state machine.
  */
 
-// ── Thresholds — must match firmware/src/config.h ─────────────────────────────
+// ── Dashboard display thresholds ──────────────────────────────────────────────
 const THRESHOLDS = { warning: 300, danger: 500 };
+const VOLTAGE_RANGES = {
+  warning: { min: 0.12, max: 0.18 },
+  danger:  { min: 0.22, max: 0.33 },
+  extreme: { min: 0.35, max: 0.52 },
+};
 
 // ── State ──────────────────────────────────────────────────────────────────────
 let alertCount = 0;
@@ -22,6 +27,30 @@ function getStateFromPpm(ppm) {
   if (ppm >= THRESHOLDS.danger)  return 'danger';
   if (ppm >= THRESHOLDS.warning) return 'warning';
   return 'safe';
+}
+
+function gasVoltageFromPpm(ppm) {
+  const value = Number(ppm);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+
+  if (value <= THRESHOLDS.warning) {
+    return (value / THRESHOLDS.warning) * VOLTAGE_RANGES.warning.min;
+  }
+
+  if (value <= THRESHOLDS.danger) {
+    const span = THRESHOLDS.danger - THRESHOLDS.warning;
+    const pct = (value - THRESHOLDS.warning) / span;
+    return VOLTAGE_RANGES.warning.min + pct * (VOLTAGE_RANGES.danger.min - VOLTAGE_RANGES.warning.min);
+  }
+
+  const extremePpm = THRESHOLDS.danger + 300;
+  const pct = Math.min((value - THRESHOLDS.danger) / (extremePpm - THRESHOLDS.danger), 1);
+  return VOLTAGE_RANGES.danger.min + pct * (VOLTAGE_RANGES.extreme.min - VOLTAGE_RANGES.danger.min);
+}
+
+function formatVoltage(voltage) {
+  const value = Number(voltage);
+  return Number.isFinite(value) ? `${value.toFixed(2)} V` : '— V';
 }
 
 function formatTime(date = new Date()) {
@@ -52,10 +81,10 @@ const STATE_MESSAGES = {
   danger:  'DANGER: critical gas level detected. Immediate action required. Fan and buzzer active.',
 };
 
-const PPM_SUBS = {
+const VOLTAGE_SUBS = {
   safe:    'Within safe range',
-  warning: 'Above warning threshold',
-  danger:  'Above danger threshold',
+  warning: 'Warning range: 0.12-0.18 V',
+  danger:  'Danger range: 0.22-0.33 V',
 };
 
 function updateStatusBadge(state) {
@@ -71,8 +100,8 @@ function updateStateBar(state) {
 }
 
 function updateMetrics(data) {
-  document.getElementById('ppmVal').textContent  = `${data.ppm_compensated} ppm`;
-  document.getElementById('ppmSub').textContent  = PPM_SUBS[data.state];
+  document.getElementById('ppmVal').textContent  = formatVoltage(data.voltage);
+  document.getElementById('ppmSub').textContent  = VOLTAGE_SUBS[data.state];
   document.getElementById('tempVal').textContent = `${data.temperature}°C`;
   document.getElementById('humVal').textContent  = `${data.humidity}%`;
   document.getElementById('lastSync').textContent = `Last sync: ${formatTime(getReadingDate(data.timestamp))}`;
@@ -109,13 +138,14 @@ function updateDeviceStates(data) {
 
 // ── UI — alert log ─────────────────────────────────────────────────────────────
 
-function addAlertEntry(ppm, state) {
+function addAlertEntry(voltage, state) {
   const time = formatTime();
+  const formattedVoltage = formatVoltage(voltage);
   const msg  = state === 'danger'
-    ? `Gas reached ${ppm} ppm — DANGER threshold crossed`
-    : `Gas reached ${ppm} ppm — Warning threshold crossed`;
+    ? `Gas reached ${formattedVoltage} — DANGER threshold crossed`
+    : `Gas reached ${formattedVoltage} — Warning threshold crossed`;
 
-  alertLog.unshift({ time, ppm, state, msg });
+  alertLog.unshift({ time, voltage, state, msg });
   if (alertLog.length > 20) alertLog.pop();
 
   alertCount++;
@@ -149,7 +179,7 @@ function addHistoryRow(reading) {
   const date = getReadingDate(reading.timestamp);
   historyRows.unshift({
     time:  formatDateTime(date),
-    ppm:   reading.ppm_compensated,
+    voltage: reading.voltage,
     temp:  reading.temperature,
     hum:   reading.humidity,
     state: reading.state,
@@ -172,7 +202,7 @@ function populateHistoryTable(readings) {
     const date = getReadingDate(r.timestamp);
     historyRows.push({
       time:  formatDateTime(date),
-      ppm:   r.ppm_compensated,
+      voltage: r.voltage,
       temp:  r.temperature,
       hum:   r.humidity,
       state: r.state,
@@ -205,7 +235,7 @@ function renderHistoryTable() {
   tbody.innerHTML = historyRows.map(r => `
     <tr>
       <td>${r.time}</td>
-      <td><strong>${r.ppm}</strong> ppm</td>
+      <td><strong>${formatVoltage(r.voltage)}</strong></td>
       <td>${r.temp.toFixed(1)}°C</td>
       <td>${r.hum.toFixed(1)}%</td>
       <td>${stateLabel(r.state)}</td>
@@ -246,15 +276,19 @@ function setupDashboardViews() {
 
 function onNewReading(data) {
   const time = formatTime(getReadingDate(data.timestamp));
+  const voltage = Number(data.voltage);
+  if (!Number.isFinite(voltage)) {
+    data.voltage = gasVoltageFromPpm(data.ppm_compensated);
+  }
 
   updateStatusBadge(data.state);
   updateStateBar(data.state);
   updateMetrics(data);
   updateDeviceStates(data);
-  updateChart(data.ppm_compensated, time);  // charts.js
+  updateChart(data.voltage, time);  // charts.js
 
   if (data.state !== 'safe' && data.state !== prevState) {
-    addAlertEntry(data.ppm_compensated, data.state);
+    addAlertEntry(data.voltage, data.state);
   }
 
   prevState = data.state;
