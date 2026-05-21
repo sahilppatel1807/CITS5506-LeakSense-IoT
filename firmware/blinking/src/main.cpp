@@ -1,233 +1,321 @@
-/**
- * main.cpp — LeakSense
- * Smart LPG / CH4 Gas Leakage Detection and Automatic Safety System
- * Group 27 · CITS5506 IoT · UWA Semester 1 2026
- *
- * Hardware:
- *   - FireBeetle ESP32-E
- *   - SEN0565 CH4 Gas Sensor (I2C on OLED bus, address 0x74)
- *   - BME280 Atmospheric Sensor (I2C bus 1, address 0x76 or 0x77)
- *   - OLED SSD1306 128x64 (I2C bus 0, address 0x3C or 0x3D)
- *   - HL-52S Relay Module → Exhaust Fan (Danger only) → GPIO 25
- *   - 5V Buzzer (Danger only — 10s cycle, button silences current cycle) → GPIO 32
- *   - Green LED  → Safe state    → GPIO 17
- *   - Yellow LED → Warning state → GPIO 33
- *   - Red LED    → Danger state  → GPIO 16
- *   - Push Button → silences buzzer for current cycle → GPIO 27
- *   - Built-in LED → D9 (heartbeat blink)
- *
- * State machine:
- *   SAFE    < 300 ppm  → Green LED on,  fan off,  buzzer off
- *   WARNING 300–500 ppm → Yellow LED on, fan off,  buzzer off
- *   DANGER  > 500 ppm  → Red LED on,    fan on,   buzzer on (10s cycle)
- *
- * Cloud:
- *   leaksense/latest  → pushed every 5 seconds
- *   leaksense/history → pushed every 5 minutes (for 24hr dashboard)
- */
-
 #include <Arduino.h>
 #include <Wire.h>
-#include <WiFi.h>
-
-// Display
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
-// BME280
 #include <Adafruit_BME280.h>
 
-// SEN0565 CH4 gas sensor
-#include <DFRobot_GasSensor.h>
-
-// Firebase
-#include <FirebaseESP32.h>
-
-// Credentials
-#include "secrets.h"
-
-// ── Pin assignments (preserved from original wiring) ──────────────────────────
-constexpr uint8_t kLedPin        = D9;   // Built-in heartbeat LED
-
-constexpr uint8_t kGreenLedPin   = 17;   // Safe indicator
-constexpr uint8_t kYellowLedPin  = 33;   // Warning indicator (new)
-constexpr uint8_t kRedLedPin     = 16;   // Danger indicator
-
-constexpr uint8_t kOledSdaPin    = 18;   // OLED I2C bus 0
-constexpr uint8_t kOledSclPin    = 23;
-
-constexpr uint8_t kBmeSdaPin     = 22;   // BME280 I2C bus 1
-constexpr uint8_t kBmeSclPin     = 21;
-
-constexpr uint8_t kRelayPin      = 25;   // HL-52S relay → exhaust fan
-constexpr uint8_t kBuzzerPin     = 32;   // 5V buzzer (new)
-constexpr uint8_t kButtonPin     = 27;   // Silence button (new, INPUT_PULLUP)
-
-// ── Screen ────────────────────────────────────────────────────────────────────
-constexpr uint8_t kScreenWidth  = 128;
+constexpr uint8_t kLedPin = D9;
+constexpr uint8_t kGreenLedPin = 17;
+constexpr uint8_t kRedLedPin = 4;
+constexpr uint8_t kYellowLedPin = 16;
+constexpr uint8_t kAlarmCancelButtonPin = 14;
+constexpr uint8_t kOledSdaPin = 18;
+constexpr uint8_t kOledSclPin = 23;
+constexpr uint8_t kBmeSdaPin = 22;
+constexpr uint8_t kBmeSclPin = 21;
+constexpr uint8_t kAlarmOutputPin = 25;
+constexpr uint8_t kFanRelayPin = 26;
+constexpr int kSen0565AnalogPin = 39;
+constexpr uint8_t kScreenWidth = 128;
 constexpr uint8_t kScreenHeight = 64;
-
-// ── I2C addresses ─────────────────────────────────────────────────────────────
 constexpr uint8_t kOledAddresses[] = {0x3C, 0x3D};
-constexpr uint8_t kBmeAddresses[]  = {0x76, 0x77};
-constexpr uint8_t kGasAddress      = 0x74;  // SEN0565
+constexpr uint8_t kBmeAddresses[] = {0x76, 0x77};
+constexpr uint8_t kGasSamplesPerRead = 32;
+constexpr unsigned long kBlinkIntervalMs = 500;
+constexpr unsigned long kRedBlinkIntervalMs = 500;
+constexpr unsigned long kSensorReadIntervalMs = 2000;
+constexpr unsigned long kGasBaselineDurationMs = 10000;
+constexpr unsigned long kLedSelfTestIntervalMs = 500;
+constexpr unsigned long kDangerAlarmDurationMs = 10000;
+constexpr unsigned long kDetectionPauseDurationMs = 10000;
+constexpr unsigned long kButtonDebounceMs = 50;
+constexpr float kSen0565WarningDeltaThresholdV = 0.55f;
+constexpr float kSen0565WarningRatioThreshold = 2.20f;
+constexpr float kSen0565DangerDeltaThresholdV = 0.75f;
+constexpr float kSen0565DangerRatioThreshold = 2.60f;
+constexpr float kSen0565ExtremeDeltaThresholdV = 1.20f;
+constexpr float kSen0565ExtremeRatioThreshold = 4.00f;
+constexpr uint8_t kGasLevelConfirmReads = 2;
+constexpr bool kAlarmOutputActiveLow = true;
+constexpr bool kFanRelayActiveLow = true;
 
-// ── Thresholds (ppm) ──────────────────────────────────────────────────────────
-constexpr float kWarningPpm = 300.0f;
-constexpr float kDangerPpm  = 500.0f;
+enum class GasLevel {
+  Safe,
+  Warning,
+  Danger,
+};
 
-// ── Timing ────────────────────────────────────────────────────────────────────
-constexpr unsigned long kBlinkIntervalMs    =     500UL;  // heartbeat LED
-constexpr unsigned long kSensorReadIntervalMs =  2000UL;  // sensor poll
-constexpr unsigned long kFirebaseLatestMs   =   5000UL;  // push latest
-constexpr unsigned long kFirebaseHistoryMs  = 300000UL;  // push history (5 min)
-constexpr unsigned long kBuzzerCycleMs      =  10000UL;  // buzzer ON duration
-constexpr unsigned long kDebounceMs         =     50UL;  // button debounce
+struct GasSensorState {
+  const char* name;
+  int analogPin;
+  float warningDeltaThresholdV;
+  float warningRatioThreshold;
+  float dangerDeltaThresholdV;
+  float dangerRatioThreshold;
+  float extremeDeltaThresholdV;
+  float extremeRatioThreshold;
+  float baselineVoltage;
+  bool baselineReady;
+  int raw;
+  float voltage;
+  GasLevel level;
+  bool extreme;
+  bool detected;
+};
 
-// ── Relay polarity ────────────────────────────────────────────────────────────
-constexpr bool kRelayActiveLow = true;
+TwoWire gOledWire = TwoWire(0);
+TwoWire gBmeWire = TwoWire(1);
+Adafruit_SSD1306 display(kScreenWidth, kScreenHeight, &gOledWire, -1);
+Adafruit_BME280 gBme;
 
-// ── System state enum ─────────────────────────────────────────────────────────
-enum class GasState { SAFE, WARNING, DANGER };
-
-// ── Two separate I2C buses (preserved from original) ─────────────────────────
-TwoWire gOledWire = TwoWire(0);   // OLED + SEN0565 gas sensor
-TwoWire gBmeWire  = TwoWire(1);   // BME280
-
-// ── Objects ───────────────────────────────────────────────────────────────────
-Adafruit_SSD1306  gDisplay(kScreenWidth, kScreenHeight, &gOledWire, -1);
-Adafruit_BME280   gBme;
-DFRobot_GasSensor gGasSensor(&gOledWire, kGasAddress);
-
-FirebaseData      gFirebaseData;
-FirebaseAuth      gFirebaseAuth;
-FirebaseConfig    gFirebaseConfig;
-
-// ── Runtime flags ─────────────────────────────────────────────────────────────
-bool gDisplayReady  = false;
-bool gBmeReady      = false;
-bool gGasReady      = false;
-bool gFirebaseReady = false;
-
+bool gDisplayReady = false;
+bool gBmeReady = false;
 uint8_t gDisplayAddress = 0;
-uint8_t gBmeAddress     = 0;
+uint8_t gBmeAddress = 0;
 
-// ── State ─────────────────────────────────────────────────────────────────────
-GasState gCurrentState = GasState::SAFE;
-GasState gPrevState    = GasState::SAFE;
 
-// Sensor readings
-float gPpm         = 0.0f;
-float gTemperature = 0.0f;
-float gHumidity    = 0.0f;
-float gPressure    = 0.0f;
+bool gLedOn = false;
 
-// Buzzer
-bool          gBuzzerActive   = false;
-bool          gBuzzerSilenced = false;
-unsigned long gBuzzerStartMs  = 0;
+bool gGasDetected = false;
+bool gDangerAlarmActive = false;
+bool gDetectionPaused = false;
+bool gRedBlinkOn = false;
+bool gGreenBlinkOn = false;
+bool gLastButtonReading = HIGH;
+bool gButtonStableState = HIGH;
+GasLevel gGasLevel = GasLevel::Safe;
+GasLevel gLastGasLevel = GasLevel::Safe;
+GasLevel gPendingGasLevel = GasLevel::Safe;
+uint8_t gPendingGasLevelCount = 0;
+unsigned long gStartMs = 0;
+unsigned long gLastBlinkMs = 0;
+unsigned long gLastRedBlinkMs = 0;
+unsigned long gLastGreenBlinkMs = 0;
+unsigned long gLastSensorReadMs = 0;
+unsigned long gDangerAlarmStartMs = 0;
+unsigned long gDetectionPauseStartMs = 0;
+unsigned long gLastButtonChangeMs = 0;
+GasSensorState gSen0565Sensor = {"SEN0565",
+                                 kSen0565AnalogPin,
+                                 kSen0565WarningDeltaThresholdV,
+                                 kSen0565WarningRatioThreshold,
+                                 kSen0565DangerDeltaThresholdV,
+                                 kSen0565DangerRatioThreshold,
+                                 kSen0565ExtremeDeltaThresholdV,
+                                 kSen0565ExtremeRatioThreshold,
+                                 0.0f,
+                                 false,
+                                 0,
+                                 0.0f,
+                                 GasLevel::Safe,
+                                 false,
+                                 false};
 
-// Button debounce
-bool          gLastButtonState = HIGH;
-unsigned long gLastDebounceMs  = 0;
-
-// Heartbeat LED
-bool          gLedOn        = false;
-unsigned long gLastBlinkMs  = 0;
-
-// Timing
-unsigned long gLastSensorMs  = 0;
-unsigned long gLastLatestMs  = 0;
-unsigned long gLastHistoryMs = 0;
-
-// ── Helper: state string ──────────────────────────────────────────────────────
-const char* stateStr(GasState s) {
-  switch (s) {
-    case GasState::WARNING: return "warning";
-    case GasState::DANGER:  return "danger";
-    default:                return "safe";
+const char* gasLevelName(GasLevel level) {
+  switch (level) {
+    case GasLevel::Danger:
+      return "DANGER";
+    case GasLevel::Warning:
+      return "WARNING";
+    case GasLevel::Safe:
+    default:
+      return "SAFE";
   }
 }
 
-GasState stateFromPpm(float ppm) {
-  if (ppm >= kDangerPpm)  return GasState::DANGER;
-  if (ppm >= kWarningPpm) return GasState::WARNING;
-  return GasState::SAFE;
+void setAlarmOutput(bool enabled) {
+  const uint8_t activeState = kAlarmOutputActiveLow ? LOW : HIGH;
+  const uint8_t inactiveState = kAlarmOutputActiveLow ? HIGH : LOW;
+  digitalWrite(kAlarmOutputPin, enabled ? activeState : inactiveState);
 }
 
-// ── Relay ─────────────────────────────────────────────────────────────────────
-void setRelay(bool on) {
-  digitalWrite(kRelayPin, (kRelayActiveLow ? !on : on) ? HIGH : LOW);
+void setFanRelay(bool enabled) {
+  const uint8_t activeState = kFanRelayActiveLow ? LOW : HIGH;
+  const uint8_t inactiveState = kFanRelayActiveLow ? HIGH : LOW;
+  digitalWrite(kFanRelayPin, enabled ? activeState : inactiveState);
 }
 
-// ── LEDs ──────────────────────────────────────────────────────────────────────
-void updateLeds(GasState state) {
-  digitalWrite(kGreenLedPin,  state == GasState::SAFE    ? HIGH : LOW);
-  digitalWrite(kYellowLedPin, state == GasState::WARNING ? HIGH : LOW);
-  digitalWrite(kRedLedPin,    state == GasState::DANGER  ? HIGH : LOW);
+void setStatusLeds(bool greenOn, bool redOn, bool yellowOn);
+
+void startDangerAlarm(unsigned long now) {
+  gDangerAlarmActive = true;
+  gDangerAlarmStartMs = now;
+  gRedBlinkOn = true;
+  gLastRedBlinkMs = now;
+  setAlarmOutput(true);
+  setFanRelay(true);
 }
 
-// ── Buzzer ────────────────────────────────────────────────────────────────────
-void updateBuzzer(unsigned long now, GasState state) {
-  if (state != GasState::DANGER) {
-    gBuzzerActive   = false;
-    gBuzzerSilenced = false;
-    digitalWrite(kBuzzerPin, LOW);
+void stopDangerAlarm() {
+  gDangerAlarmActive = false;
+  gGasDetected = false;
+  gGasLevel = GasLevel::Safe;
+  gPendingGasLevel = GasLevel::Safe;
+  gPendingGasLevelCount = 0;
+  gRedBlinkOn = false;
+  setAlarmOutput(false);
+  setFanRelay(false);
+  setStatusLeds(true, false, false);
+}
+
+void startDetectionPause(unsigned long now) {
+  stopDangerAlarm();
+  gDetectionPaused = true;
+  gDetectionPauseStartMs = now;
+  gGreenBlinkOn = true;
+  gLastGreenBlinkMs = now;
+  setStatusLeds(true, false, false);
+}
+
+void updateDetectionPause(unsigned long now) {
+  if (!gDetectionPaused) {
     return;
   }
 
-  // Start first cycle or restart after 10s
-  if (!gBuzzerActive || (now - gBuzzerStartMs >= kBuzzerCycleMs)) {
-    gBuzzerActive   = true;
-    gBuzzerSilenced = false;
-    gBuzzerStartMs  = now;
-    digitalWrite(kBuzzerPin, HIGH);
+  if (now - gDetectionPauseStartMs >= kDetectionPauseDurationMs) {
+    gDetectionPaused = false;
+    gGreenBlinkOn = false;
+    gLastSensorReadMs = 0;
+    Serial.println("Detection pause ended; monitoring resumed");
     return;
   }
 
-  // Mid-cycle: honour silence
-  if (gBuzzerSilenced) {
-    digitalWrite(kBuzzerPin, LOW);
+  if (now - gLastGreenBlinkMs >= kBlinkIntervalMs) {
+    gLastGreenBlinkMs = now;
+    gGreenBlinkOn = !gGreenBlinkOn;
   }
+  setStatusLeds(gGreenBlinkOn, false, false);
 }
 
-// ── Button ────────────────────────────────────────────────────────────────────
-void handleButton(unsigned long now) {
-  const bool reading = digitalRead(kButtonPin);
-
-  if (reading != gLastButtonState) {
-    gLastDebounceMs = now;
+void updateDangerAlarm(unsigned long now) {
+  if (!gDangerAlarmActive) {
+    setAlarmOutput(false);
+    setFanRelay(false);
+    return;
   }
 
-  if ((now - gLastDebounceMs) >= kDebounceMs) {
-    // Falling edge = button pressed (active LOW, INPUT_PULLUP)
-    if (reading == LOW && gLastButtonState == HIGH) {
-      if (gBuzzerActive && !gBuzzerSilenced) {
-        gBuzzerSilenced = true;
-        digitalWrite(kBuzzerPin, LOW);
-        Serial.println("Button pressed — buzzer silenced for this cycle.");
-      }
+  if (now - gDangerAlarmStartMs >= kDangerAlarmDurationMs) {
+    stopDangerAlarm();
+    return;
+  }
+
+  setAlarmOutput(true);
+  setFanRelay(true);
+}
+
+void setStatusLeds(bool greenOn, bool redOn, bool yellowOn) {
+  digitalWrite(kGreenLedPin, greenOn ? HIGH : LOW);
+  digitalWrite(kRedLedPin, redOn ? HIGH : LOW);
+  digitalWrite(kYellowLedPin, yellowOn ? HIGH : LOW);
+}
+
+void runLedSelfTest() {
+  setStatusLeds(false, false, false);
+  delay(100);
+  Serial.println("LED self-test: green -> yellow -> red");
+
+  setStatusLeds(true, false, false);
+  delay(kLedSelfTestIntervalMs);
+  setStatusLeds(false, false, true);
+  delay(kLedSelfTestIntervalMs);
+  setStatusLeds(false, true, false);
+  delay(kLedSelfTestIntervalMs);
+  setStatusLeds(false, false, false);
+}
+
+void updateStatusLeds(unsigned long now) {
+  if (gDetectionPaused) {
+    updateDetectionPause(now);
+    return;
+  }
+
+  if (gDangerAlarmActive) {
+    if (now - gLastRedBlinkMs >= kRedBlinkIntervalMs) {
+      gLastRedBlinkMs = now;
+      gRedBlinkOn = !gRedBlinkOn;
     }
+    setStatusLeds(false, gRedBlinkOn, false);
+    return;
   }
 
-  gLastButtonState = reading;
+  switch (gGasLevel) {
+    case GasLevel::Danger:
+      setStatusLeds(false, true, false);
+      break;
+    case GasLevel::Warning:
+      setStatusLeds(false, false, true);
+      break;
+    case GasLevel::Safe:
+    default:
+      setStatusLeds(true, false, false);
+      break;
+  }
 }
 
-// ── I2C scanner ───────────────────────────────────────────────────────────────
+void handleAlarmCancelButton(unsigned long now) {
+  const bool reading = digitalRead(kAlarmCancelButtonPin);
+  if (reading != gLastButtonReading) {
+    gLastButtonReading = reading;
+    gLastButtonChangeMs = now;
+  }
+
+  if (now - gLastButtonChangeMs < kButtonDebounceMs || reading == gButtonStableState) {
+    return;
+  }
+
+  gButtonStableState = reading;
+  if (gButtonStableState == LOW) {
+    Serial.println("Detection paused by GPIO14 button for 10 seconds");
+    startDetectionPause(now);
+  }
+}
+
+GasLevel confirmGasLevel(GasLevel newLevel, bool extremeDanger) {
+  if (newLevel == GasLevel::Safe) {
+    gPendingGasLevel = GasLevel::Safe;
+    gPendingGasLevelCount = 0;
+    return GasLevel::Safe;
+  }
+
+  if (newLevel == GasLevel::Warning) {
+    gPendingGasLevel = GasLevel::Warning;
+    gPendingGasLevelCount = 0;
+    return GasLevel::Warning;
+  }
+
+  if (extremeDanger) {
+    gPendingGasLevel = GasLevel::Danger;
+    gPendingGasLevelCount = 0;
+    return GasLevel::Danger;
+  }
+
+  if (gPendingGasLevel != GasLevel::Danger) {
+    gPendingGasLevel = GasLevel::Danger;
+    gPendingGasLevelCount = 1;
+  } else if (gPendingGasLevelCount < kGasLevelConfirmReads) {
+    ++gPendingGasLevelCount;
+  }
+  if (gPendingGasLevelCount >= kGasLevelConfirmReads) {
+    gPendingGasLevelCount = 0;
+    return GasLevel::Danger;
+  }
+
+  return GasLevel::Warning;
+}
+
 void scanI2CBus(TwoWire& bus, const char* label) {
   Serial.printf("Scanning %s I2C bus...\r\n", label);
   for (uint8_t address = 1; address < 127; ++address) {
     bus.beginTransmission(address);
     if (bus.endTransmission() == 0) {
-      Serial.printf("  %s bus device found at 0x%02X\r\n", label, address);
+      Serial.printf("%s bus device found at 0x%02X\r\n", label, address);
     }
   }
 }
 
-// ── Display helpers ───────────────────────────────────────────────────────────
 bool initDisplay() {
   for (uint8_t address : kOledAddresses) {
-    if (gDisplay.begin(SSD1306_SWITCHCAPVCC, address)) {
+    if (display.begin(SSD1306_SWITCHCAPVCC, address)) {
       gDisplayAddress = address;
       return true;
     }
@@ -235,36 +323,6 @@ bool initDisplay() {
   return false;
 }
 
-void drawOled(GasState state, float ppm, float temp, float hum) {
-  if (!gDisplayReady) return;
-
-  gDisplay.clearDisplay();
-  gDisplay.setTextSize(1);
-  gDisplay.setTextColor(SSD1306_WHITE);
-
-  gDisplay.setCursor(0, 0);
-  gDisplay.println("LeakSense");
-
-  gDisplay.setCursor(0, 12);
-  switch (state) {
-    case GasState::SAFE:    gDisplay.println("State: SAFE");    break;
-    case GasState::WARNING: gDisplay.println("State: WARNING"); break;
-    case GasState::DANGER:  gDisplay.println("State: DANGER!"); break;
-  }
-
-  gDisplay.setCursor(0, 24);
-  gDisplay.printf("Gas:  %.0f ppm\n", ppm);
-
-  gDisplay.setCursor(0, 36);
-  gDisplay.printf("Temp: %.1f C\n", temp);
-
-  gDisplay.setCursor(0, 48);
-  gDisplay.printf("Hum:  %.1f %%\n", hum);
-
-  gDisplay.display();
-}
-
-// ── BME280 init ───────────────────────────────────────────────────────────────
 bool initBme() {
   for (uint8_t address : kBmeAddresses) {
     if (gBme.begin(address, &gBmeWire)) {
@@ -275,225 +333,246 @@ bool initBme() {
   return false;
 }
 
-// ── WiFi ──────────────────────────────────────────────────────────────────────
-void initWiFi() {
-  Serial.printf("Connecting to WiFi: %s\r\n", WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  const unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
-    delay(500);
-    Serial.print('.');
+float readAnalogVoltage(int analogPin) {
+  uint32_t total = 0;
+  for (uint8_t i = 0; i < kGasSamplesPerRead; ++i) {
+    total += analogRead(analogPin);
+    delay(2);
   }
 
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("\r\nWiFi connected — IP: %s\r\n", WiFi.localIP().toString().c_str());
+  const float raw = total / static_cast<float>(kGasSamplesPerRead);
+  return raw * 3.3f / 4095.0f;
+}
+
+void updateGasBaseline(GasSensorState& sensor) {
+  if (sensor.baselineReady) {
+    return;
+  }
+
+  if (sensor.baselineVoltage <= 0.0f) {
+    sensor.baselineVoltage = sensor.voltage;
   } else {
-    Serial.println("\r\nWiFi failed — running offline. Local safety still active.");
+    sensor.baselineVoltage = (sensor.baselineVoltage * 0.85f) + (sensor.voltage * 0.15f);
+  }
+
+  if (millis() - gStartMs >= kGasBaselineDurationMs) {
+    sensor.baselineReady = true;
+    Serial.printf("%s baseline ready: %.3f V\r\n", sensor.name, sensor.baselineVoltage);
   }
 }
 
-// ── Firebase ──────────────────────────────────────────────────────────────────
-void initFirebase() {
-  if (WiFi.status() != WL_CONNECTED) return;
-
-  gFirebaseConfig.host = FIREBASE_HOST;
-  gFirebaseConfig.signer.tokens.legacy_token = FIREBASE_AUTH;
-
-  Firebase.begin(&gFirebaseConfig, &gFirebaseAuth);
-  Firebase.reconnectWiFi(true);
-  gFirebaseReady = true;
-  Serial.println("Firebase initialised.");
+float gasRatio(const GasSensorState& sensor) {
+  return sensor.baselineVoltage > 0.01f ? sensor.voltage / sensor.baselineVoltage : 0.0f;
 }
 
-void pushLatest() {
-  if (!gFirebaseReady || WiFi.status() != WL_CONNECTED) return;
+GasLevel evaluateGasLevel(const GasSensorState& sensor) {
+  if (!sensor.baselineReady || sensor.baselineVoltage <= 0.01f) {
+    return GasLevel::Safe;
+  }
 
-  const bool fanOn    = (gCurrentState == GasState::DANGER);
-  const bool buzzerOn = (gCurrentState == GasState::DANGER && gBuzzerActive && !gBuzzerSilenced);
+  const float delta = sensor.voltage - sensor.baselineVoltage;
+  const float ratio = gasRatio(sensor);
+  if (delta > sensor.extremeDeltaThresholdV || ratio > sensor.extremeRatioThreshold) {
+    return GasLevel::Danger;
+  }
+  if (delta > sensor.dangerDeltaThresholdV || ratio > sensor.dangerRatioThreshold) {
+    return GasLevel::Danger;
+  }
+  if (delta > sensor.warningDeltaThresholdV || ratio > sensor.warningRatioThreshold) {
+    return GasLevel::Warning;
+  }
+  return GasLevel::Safe;
+}
 
-  FirebaseJson json;
-  json.set("ppm_compensated", (int)gPpm);
-  json.set("temperature",     gTemperature);
-  json.set("humidity",        gHumidity);
-  json.set("state",           stateStr(gCurrentState));
-  json.set("fan",             fanOn);
-  json.set("buzzer",          buzzerOn);
-  json.set("timestamp",       (long)(millis() / 1000));
+void sampleGasSensor(GasSensorState& sensor) {
+  sensor.raw = analogRead(sensor.analogPin);
+  sensor.voltage = readAnalogVoltage(sensor.analogPin);
+  updateGasBaseline(sensor);
+  const float delta = sensor.voltage - sensor.baselineVoltage;
+  const float ratio = gasRatio(sensor);
+  sensor.extreme = sensor.baselineReady &&
+                   (delta > sensor.extremeDeltaThresholdV || ratio > sensor.extremeRatioThreshold);
+  sensor.level = evaluateGasLevel(sensor);
+  sensor.detected = sensor.level == GasLevel::Danger;
+}
 
-  if (!Firebase.setJSON(gFirebaseData, "/leaksense/latest", json)) {
-    Serial.printf("Firebase latest failed: %s\r\n", gFirebaseData.errorReason().c_str());
+void printGasSensor(const GasSensorState& sensor) {
+  if (sensor.baselineReady) {
+    const float delta = sensor.voltage - sensor.baselineVoltage;
+    Serial.printf("%s -> raw=%d, V=%.3f, baseline=%.3f, delta=%+.3f, ratio=%.2f, state=%s, extreme=%s\r\n",
+                  sensor.name,
+                  sensor.raw,
+                  sensor.voltage,
+                  sensor.baselineVoltage,
+                  delta,
+                  gasRatio(sensor),
+                  gasLevelName(sensor.level),
+                  sensor.extreme ? "YES" : "no");
+  } else {
+    Serial.printf("%s baselining -> raw=%d, V=%.3f\r\n",
+                  sensor.name,
+                  sensor.raw,
+                  sensor.voltage);
   }
 }
 
-void pushHistory() {
-  if (!gFirebaseReady || WiFi.status() != WL_CONNECTED) return;
+void drawStatusScreen(float temperatureC,
+                      float humidityPct,
+                      float pressureHpa,
+                      const GasSensorState& sensor,
+                      GasLevel confirmedLevel,
+                      bool gasDetected,
+                      bool fanOn) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("LeakSense SEN0565");
 
-  const bool fanOn    = (gCurrentState == GasState::DANGER);
-  const bool buzzerOn = (gCurrentState == GasState::DANGER && gBuzzerActive && !gBuzzerSilenced);
+  if (gBmeReady) {
+    display.printf("T:%.1fC H:%.0f%% P:%.0f\r\n", temperatureC, humidityPct, pressureHpa);
 
-  FirebaseJson json;
-  json.set("ppm_compensated", (int)gPpm);
-  json.set("temperature",     gTemperature);
-  json.set("humidity",        gHumidity);
-  json.set("state",           stateStr(gCurrentState));
-  json.set("fan",             fanOn);
-  json.set("buzzer",          buzzerOn);
-  json.set("timestamp",       (long)(millis() / 1000));
+  } else {
+    display.println("BME280 not found");
 
-  if (!Firebase.pushJSON(gFirebaseData, "/leaksense/history", json)) {
-    Serial.printf("Firebase history failed: %s\r\n", gFirebaseData.errorReason().c_str());
   }
+
+  display.printf("Raw:%4d V:%.2f\r\n", sensor.raw, sensor.voltage);
+  if (sensor.baselineReady) {
+    display.printf("Base:%.2f R:%.2f\r\n", sensor.baselineVoltage, gasRatio(sensor));
+    display.printf("State:%s\r\n", gasLevelName(confirmedLevel));
+    display.printf("Alarm:%s Fan:%s\r\n", gasDetected ? "ON" : "off", fanOn ? "ON" : "off");
+
+
+  } else {
+    const unsigned long elapsedMs = millis() - gStartMs;
+    const unsigned long cappedElapsedMs =
+        elapsedMs > kGasBaselineDurationMs ? kGasBaselineDurationMs : elapsedMs;
+    const unsigned long remainingSec = (kGasBaselineDurationMs - cappedElapsedMs) / 1000;
+    display.println("Baselining SEN0565");
+
+    display.printf("Time left: %lus\r\n", remainingSec);
+  }
+
+  display.display();
 }
 
-// ── Setup ─────────────────────────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
-  delay(200);
-  Serial.println("\r\n=== LeakSense booting ===");
-
-  // GPIO
-  pinMode(kLedPin,       OUTPUT);
-  pinMode(kGreenLedPin,  OUTPUT);
+  pinMode(kLedPin, OUTPUT);
+  pinMode(kGreenLedPin, OUTPUT);
+  pinMode(kRedLedPin, OUTPUT);
   pinMode(kYellowLedPin, OUTPUT);
-  pinMode(kRedLedPin,    OUTPUT);
-  pinMode(kRelayPin,     OUTPUT);
-  pinMode(kBuzzerPin,    OUTPUT);
-  pinMode(kButtonPin,    INPUT_PULLUP);
+  pinMode(kAlarmOutputPin, OUTPUT);
+  pinMode(kFanRelayPin, OUTPUT);
+  pinMode(kAlarmCancelButtonPin, INPUT_PULLUP);
+  gLastButtonReading = digitalRead(kAlarmCancelButtonPin);
+  gButtonStableState = gLastButtonReading;
+  setAlarmOutput(false);
+  setFanRelay(false);
+  runLedSelfTest();
+  updateStatusLeds(millis());
 
-  // Safe defaults on boot
-  digitalWrite(kGreenLedPin,  HIGH);
-  digitalWrite(kYellowLedPin, LOW);
-  digitalWrite(kRedLedPin,    LOW);
-  digitalWrite(kBuzzerPin,    LOW);
-  setRelay(false);
+  analogReadResolution(12);
+  analogSetPinAttenuation(kSen0565AnalogPin, ADC_11db);
+  gStartMs = millis();
+  delay(200);
 
-  // Relay self-test
-  Serial.println("Relay self-test...");
-  setRelay(true);
-  delay(500);
-  setRelay(false);
 
-  // OLED bus (bus 0: SDA=18, SCL=23)
+
+
+
+
+  Serial.printf("OLED test starting (SDA=%u, SCL=%u)\r\n", kOledSdaPin, kOledSclPin);
   gOledWire.begin(kOledSdaPin, kOledSclPin);
   scanI2CBus(gOledWire, "OLED");
 
   gDisplayReady = initDisplay();
   if (gDisplayReady) {
-    Serial.printf("OLED ready at 0x%02X\r\n", gDisplayAddress);
-    gDisplay.clearDisplay();
-    gDisplay.setTextColor(SSD1306_WHITE);
-    gDisplay.setCursor(0, 0);
-    gDisplay.println("LeakSense");
-    gDisplay.println("Booting...");
-    gDisplay.display();
+    Serial.printf("OLED initialized at 0x%02X\r\n", gDisplayAddress);
   } else {
-    Serial.println("OLED init failed. Check SDA=18, SCL=23.");
+    Serial.println("OLED init failed. Check VCC/GND/SDA/SCL and address.");
   }
 
-  // BME280 bus (bus 1: SDA=22, SCL=21)
+  Serial.printf("BME280 test starting (SDA=%u, SCL=%u)\r\n", kBmeSdaPin, kBmeSclPin);
   gBmeWire.begin(kBmeSdaPin, kBmeSclPin);
   scanI2CBus(gBmeWire, "BME280");
 
   gBmeReady = initBme();
   if (gBmeReady) {
-    Serial.printf("BME280 ready at 0x%02X\r\n", gBmeAddress);
+    Serial.printf("BME280 initialized at 0x%02X\r\n", gBmeAddress);
   } else {
-    Serial.println("BME280 init failed. Check SDA=22, SCL=21.");
+    Serial.println("BME280 init failed. Check VCC/GND/SDA/SCL and ADR/CS pins.");
   }
 
-  // SEN0565 gas sensor (on OLED bus, address 0x74)
-  gGasReady = (gGasSensor.begin() == 0);
-  if (gGasReady) {
-    Serial.printf("SEN0565 ready at 0x%02X\r\n", kGasAddress);
-  } else {
-    Serial.println("SEN0565 init failed. Check wiring on OLED bus.");
-  }
-
-  // WiFi + Firebase
-  initWiFi();
-  initFirebase();
-
-  const unsigned long now = millis();
-  gLastSensorMs  = now;
-  gLastLatestMs  = now;
-  gLastHistoryMs = now;
-  gLastBlinkMs   = now;
-
-  Serial.println("=== LeakSense ready ===\r\n");
+  Serial.printf("%s test starting (A=GPIO%d)\r\n", gSen0565Sensor.name, gSen0565Sensor.analogPin);
+  Serial.println("SEN0565 alarm contribution: enabled");
+  Serial.println("Keep SEN0565 in clean air for the first 10 seconds.");
+  Serial.println("Warm SEN0565 for at least 5 minutes before trusting its thresholds.");
 }
 
-// ── Loop ──────────────────────────────────────────────────────────────────────
 void loop() {
   const unsigned long now = millis();
+  handleAlarmCancelButton(now);
+  updateDetectionPause(now);
+  updateDangerAlarm(now);
+  updateStatusLeds(now);
 
-  // ── Heartbeat LED ──────────────────────────────────────────────────────────
   if (now - gLastBlinkMs >= kBlinkIntervalMs) {
     gLastBlinkMs = now;
     gLedOn = !gLedOn;
     digitalWrite(kLedPin, gLedOn ? HIGH : LOW);
   }
 
-  // ── Button ─────────────────────────────────────────────────────────────────
-  handleButton(now);
+  if (!gDetectionPaused && now - gLastSensorReadMs >= kSensorReadIntervalMs) {
+    gLastSensorReadMs = now;
 
-  // ── Sensor poll (every 2s) ─────────────────────────────────────────────────
-  if (now - gLastSensorMs >= kSensorReadIntervalMs) {
-    gLastSensorMs = now;
-
-    // Gas sensor
-    if (gGasReady) {
-      gPpm = gGasSensor.readGasConcentrationPPM();
+    float temperatureC = NAN;
+    float humidityPct = NAN;
+    float pressureHpa = NAN;
+    sampleGasSensor(gSen0565Sensor);
+    gLastGasLevel = gGasLevel;
+    gGasLevel = confirmGasLevel(gSen0565Sensor.level, gSen0565Sensor.extreme);
+    gGasDetected = gGasLevel == GasLevel::Danger;
+    if (gGasDetected && gLastGasLevel != GasLevel::Danger) {
+      startDangerAlarm(now);
     }
+    updateDangerAlarm(now);
+    updateStatusLeds(now);
 
-    // BME280
     if (gBmeReady) {
-      gTemperature = gBme.readTemperature();
-      gHumidity    = gBme.readHumidity();
-      gPressure    = gBme.readPressure() / 100.0f;
+      temperatureC = gBme.readTemperature();
+      humidityPct = gBme.readHumidity();
+      pressureHpa = gBme.readPressure() / 100.0f;
+
       Serial.printf("BME280 0x%02X -> T=%.2f C, H=%.2f %%, P=%.2f hPa\r\n",
-                    gBmeAddress, gTemperature, gHumidity, gPressure);
+                    gBmeAddress, temperatureC, humidityPct, pressureHpa);
     } else {
-      Serial.println("BME280 not ready.");
+      Serial.println("BME280 not ready");
     }
 
-    // Derive new state
-    gCurrentState = stateFromPpm(gPpm);
+    printGasSensor(gSen0565Sensor);
+    Serial.printf("Alarm source -> SEN0565 raw=%s, confirmed=%s, alarm=%s, fan=%s\r\n",
+                  gasLevelName(gSen0565Sensor.level),
+                  gasLevelName(gGasLevel),
+                  gDangerAlarmActive ? "ON" : "off",
+                  gDangerAlarmActive ? "ON" : "off");
 
-    if (gCurrentState != gPrevState) {
-      Serial.printf("State: %s → %s (%.0f ppm)\r\n",
-                    stateStr(gPrevState), stateStr(gCurrentState), gPpm);
-      gPrevState = gCurrentState;
+
+
+
+
+
+
+
+    if (gDisplayReady) {
+      drawStatusScreen(temperatureC,
+                       humidityPct,
+                       pressureHpa,
+                       gSen0565Sensor,
+                       gGasLevel,
+                       gDangerAlarmActive,
+                       gDangerAlarmActive);
     }
-
-    // Actuators
-    updateLeds(gCurrentState);
-    setRelay(gCurrentState == GasState::DANGER);
-
-    // OLED
-    drawOled(gCurrentState, gPpm, gTemperature, gHumidity);
-
-    Serial.printf("[%s] ppm=%.0f  T=%.1fC  H=%.1f%%  fan=%s  buzzer=%s\r\n",
-                  stateStr(gCurrentState),
-                  gPpm,
-                  gTemperature,
-                  gHumidity,
-                  (gCurrentState == GasState::DANGER) ? "ON" : "off",
-                  (gBuzzerActive && !gBuzzerSilenced) ? "ON" : "off");
-  }
-
-  // ── Buzzer (checked every loop iteration) ─────────────────────────────────
-  updateBuzzer(now, gCurrentState);
-
-  // ── Firebase: latest (every 5s) ───────────────────────────────────────────
-  if (now - gLastLatestMs >= kFirebaseLatestMs) {
-    gLastLatestMs = now;
-    pushLatest();
-  }
-
-  // ── Firebase: history (every 5 min) ───────────────────────────────────────
-  if (now - gLastHistoryMs >= kFirebaseHistoryMs) {
-    gLastHistoryMs = now;
-    pushHistory();
   }
 }
