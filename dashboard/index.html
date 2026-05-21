@@ -4,20 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LeakSense — LPG Gas Detection Dashboard</title>
-
+ 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
+ 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
+ 
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-
+ 
 <div class="app">
-
+ 
   <!-- ── Top bar ──────────────────────────────────────────────────────────── -->
   <header class="topbar">
     <div class="topbar__left">
@@ -29,12 +29,12 @@
       <span class="status-badge safe" id="statusBadge">Safe</span>
     </div>
   </header>
-
+ 
   <!-- ── State notification bar ───────────────────────────────────────────── -->
   <div class="state-bar safe" id="stateBar">
     System operating normally. Gas levels within safe range.
   </div>
-
+ 
   <!-- ── Metric cards ─────────────────────────────────────────────────────── -->
   <section class="metrics">
     <div class="card metric-card">
@@ -58,24 +58,27 @@
       <p class="metric-card__sub">Warning + Danger events</p>
     </div>
   </section>
-
+ 
   <!-- ── Live main grid ───────────────────────────────────────────────────── -->
-  <div class="main-grid">
-
+  <div class="main-grid view-panel" id="liveView">
+ 
     <!-- Live trend chart -->
     <div class="card chart-card">
-      <p class="card__title">Gas concentration — last 60 readings (live)</p>
+      <div class="card__header">
+        <p class="card__title">Gas concentration — last 60 readings (live)</p>
+        <button class="view-toggle-btn" type="button" id="showHistoryBtn">History</button>
+      </div>
       <canvas id="trendChart"></canvas>
     </div>
-
+ 
     <!-- Device states + alert log -->
     <div class="right-col">
-
+ 
       <!-- Device states -->
       <div class="card">
         <p class="card__title">Device states</p>
         <div class="device-list">
-
+ 
           <div class="device-row">
             <div>
               <p class="device-row__name">Exhaust fan</p>
@@ -83,7 +86,7 @@
             </div>
             <span class="pill" id="fanState">off</span>
           </div>
-
+ 
           <div class="device-row">
             <div>
               <p class="device-row__name">Buzzer</p>
@@ -91,7 +94,7 @@
             </div>
             <span class="pill" id="buzzerState">off</span>
           </div>
-
+ 
           <div class="device-row">
             <div>
               <p class="device-row__name">Green LED</p>
@@ -99,7 +102,7 @@
             </div>
             <span class="pill pill--on" id="greenLed">on</span>
           </div>
-
+ 
           <div class="device-row">
             <div>
               <p class="device-row__name">Yellow LED</p>
@@ -107,7 +110,7 @@
             </div>
             <span class="pill" id="yellowLed">off</span>
           </div>
-
+ 
           <div class="device-row">
             <div>
               <p class="device-row__name">Red LED</p>
@@ -115,7 +118,7 @@
             </div>
             <span class="pill" id="redLed">off</span>
           </div>
-
+ 
           <div class="device-row device-row--last">
             <div>
               <p class="device-row__name">Cloud sync</p>
@@ -123,10 +126,10 @@
             </div>
             <span class="pill pill--on" id="cloudSync">live</span>
           </div>
-
+ 
         </div>
       </div>
-
+ 
       <!-- Alert log -->
       <div class="card alert-card">
         <p class="card__title">Alert log</p>
@@ -134,19 +137,22 @@
           <p class="alert-log__empty">No alerts yet — system safe.</p>
         </div>
       </div>
-
+ 
     </div>
   </div><!-- /.main-grid -->
-
+ 
   <!-- ── 24-hour history ──────────────────────────────────────────────────── -->
-  <div class="history-section">
-
+  <div class="history-section view-panel" id="historyView">
+ 
     <!-- 24hr chart -->
     <div class="card history-chart-card">
-      <p class="card__title">24-hour history — Gas · Temperature · Humidity</p>
+      <div class="card__header">
+        <p class="card__title">24-hour history — Gas · Temperature · Humidity</p>
+        <button class="view-toggle-btn" type="button" id="showLiveBtn">Live</button>
+      </div>
       <canvas id="historyChart"></canvas>
     </div>
-
+ 
     <!-- 24hr data table -->
     <div class="card">
       <p class="card__title">24-hour reading log (every 5 minutes)</p>
@@ -166,16 +172,18 @@
         </table>
       </div>
     </div>
-
+ 
   </div><!-- /.history-section -->
-
+ 
 </div><!-- /.app -->
-
+ 
 <!-- JS — order matters -->
 <script src="js/mock.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/firebase.js"></script>
 <script src="js/dashboard.js"></script>
-
+ 
 </body>
 </html>
+ 
+ 

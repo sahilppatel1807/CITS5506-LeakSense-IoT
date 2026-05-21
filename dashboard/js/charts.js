@@ -1,22 +1,22 @@
 /**
- * charts.js
- * Manages two Chart.js charts:
- *  - trendChart  : live readings, last 60 points
- *  - historyChart: 24-hour ppm + temperature + humidity
- */
-
+* charts.js
+* Manages two Chart.js charts:
+*  - trendChart  : live readings, last 60 points
+*  - historyChart: 24-hour ppm + temperature + humidity
+*/
+ 
 const THRESHOLD_WARNING = 300;
 const THRESHOLD_DANGER  = 500;
 const MAX_LIVE_POINTS   = 60;
-
+ 
 let trendChart   = null;
 let historyChart = null;
-
+ 
 // ── Live trend chart ───────────────────────────────────────────────────────────
-
+ 
 function initChart() {
   const ctx = document.getElementById('trendChart').getContext('2d');
-
+ 
   trendChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -84,34 +84,34 @@ function initChart() {
     },
   });
 }
-
+ 
 function updateChart(ppm, time) {
   const [gasData, warnData, dangerData] = trendChart.data.datasets.map(d => d.data);
   const labels = trendChart.data.labels;
-
+ 
   gasData.push(ppm);
   warnData.push(THRESHOLD_WARNING);
   dangerData.push(THRESHOLD_DANGER);
   labels.push(time);
-
+ 
   if (gasData.length > MAX_LIVE_POINTS) {
     gasData.shift(); warnData.shift(); dangerData.shift(); labels.shift();
   }
-
+ 
   trendChart.update('none');
 }
-
+ 
 function resetChart() {
   trendChart.data.labels = [];
   trendChart.data.datasets.forEach(d => { d.data = []; });
   trendChart.update('none');
 }
-
+ 
 // ── 24-hour history chart ──────────────────────────────────────────────────────
-
+ 
 function initHistoryChart() {
   const ctx = document.getElementById('historyChart').getContext('2d');
-
+ 
   historyChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -226,35 +226,36 @@ function initHistoryChart() {
     },
   });
 }
-
+ 
 /**
- * Adds a single history reading to the 24hr chart.
- * Called both when loading existing history and on new live entries.
- * @param {object} reading - normalised reading from firebase.js
- */
+* Adds a single history reading to the 24hr chart.
+* Called both when loading existing history and on new live entries.
+* @param {object} reading - normalised reading from firebase.js
+*/
 function addHistoryPoint(reading) {
   const date   = new Date(reading.timestamp);
   const label  = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
-
+ 
   const [ppmDs, tempDs, humDs, warnDs, dangerDs] = historyChart.data.datasets;
-
+ 
   ppmDs.data.push(reading.ppm_compensated);
   tempDs.data.push(reading.temperature);
   humDs.data.push(reading.humidity);
   warnDs.data.push(THRESHOLD_WARNING);
   dangerDs.data.push(THRESHOLD_DANGER);
   historyChart.data.labels.push(label);
-
+ 
   historyChart.update('none');
 }
-
+ 
 /**
- * Replaces all history chart data at once (used on initial load).
- * @param {Array} readings - array of normalised reading objects
- */
+* Replaces all history chart data at once (used on initial load).
+* @param {Array} readings - array of normalised reading objects
+*/
 function populateHistoryChart(readings) {
   historyChart.data.labels = [];
   historyChart.data.datasets.forEach(d => { d.data = []; });
-
+ 
   readings.forEach(r => addHistoryPoint(r));
 }
+ 
