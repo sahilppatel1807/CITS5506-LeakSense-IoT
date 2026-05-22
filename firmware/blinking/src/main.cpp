@@ -36,6 +36,8 @@ constexpr unsigned long kDetectionPauseDurationMs = 10000;
 constexpr float kSen0565WarningVoltageThresholdV = 1.60f;
 constexpr float kSen0565DangerVoltageThresholdV = 1.90f;
 constexpr float kSen0565ExtremeVoltageThresholdV = 2.20f;
+constexpr float kThermalRiskTempRiseC = 5.0f;
+constexpr float kThermalRiskAbsoluteTempC = 55.0f;
 constexpr uint8_t kGasLevelConfirmReads = 5;
 constexpr bool kAlarmOutputActiveLow = true;
 constexpr bool kFanRelayActiveLow = true;
@@ -94,6 +96,7 @@ unsigned long gLastSensorReadMs = 0;
 unsigned long gLastFirebaseHistoryMs = 0;
 unsigned long gDangerAlarmStartMs = 0;
 unsigned long gDetectionPauseStartMs = 0;
+float gLastTemperatureC = NAN;
 GasSensorState gSen0565Sensor = {"SEN0565",
                                  kSen0565AnalogPin,
                                  kSen0565WarningVoltageThresholdV,
@@ -275,7 +278,8 @@ String firebasePayload(float ppm,
                        float humidityPct,
                        const char* state,
                        bool fan,
-                       bool buzzer) {
+                       bool buzzer,
+                       bool thermalRisk) {
   String payload = "{";
   payload += "\"ppm_compensated\":" + jsonFloat(ppm, 1) + ",";
   payload += "\"ppm_raw\":" + jsonFloat(rawPpm, 1) + ",";
@@ -285,6 +289,7 @@ String firebasePayload(float ppm,
   payload += "\"state\":\"" + String(state) + "\",";
   payload += "\"fan\":" + String(fan ? "true" : "false") + ",";
   payload += "\"buzzer\":" + String(buzzer ? "true" : "false") + ",";
+  payload += "\"thermal_risk\":" + String(thermalRisk ? "true" : "false") + ",";
   payload += "\"timestamp\":{\".sv\":\"timestamp\"}";
   payload += "}";
   return payload;
@@ -299,7 +304,8 @@ bool uploadReadingToFirebase(const char* node,
                              float humidityPct,
                              const char* state,
                              bool fan,
-                             bool buzzer) {
+                             bool buzzer,
+                             bool thermalRisk) {
   if (WiFi.status() != WL_CONNECTED) {
     return false;
   }
@@ -322,7 +328,8 @@ bool uploadReadingToFirebase(const char* node,
                                          humidityPct,
                                          state,
                                          fan,
-                                         buzzer);
+                                         buzzer,
+                                         thermalRisk);
   const int httpCode = append ? http.POST(payload) : http.PUT(payload);
  
   if (httpCode <= 0) {
@@ -349,7 +356,8 @@ bool uploadLatestToFirebase(float ppmCompensated,
                             float humidityPct,
                             const char* state,
                             bool fan,
-                            bool buzzer) {
+                            bool buzzer,
+                            bool thermalRisk) {
   return uploadReadingToFirebase("latest",
                                  false,
                                  ppmCompensated,
@@ -359,7 +367,8 @@ bool uploadLatestToFirebase(float ppmCompensated,
                                  humidityPct,
                                  state,
                                  fan,
-                                 buzzer);
+                                 buzzer,
+                                 thermalRisk);
 }
  
 bool uploadHistoryToFirebase(float ppmCompensated,
@@ -369,7 +378,8 @@ bool uploadHistoryToFirebase(float ppmCompensated,
                              float humidityPct,
                              const char* state,
                              bool fan,
-                             bool buzzer) {
+                             bool buzzer,
+                             bool thermalRisk) {
   return uploadReadingToFirebase("history",
                                  true,
                                  ppmCompensated,
@@ -379,7 +389,8 @@ bool uploadHistoryToFirebase(float ppmCompensated,
                                  humidityPct,
                                  state,
                                  fan,
-                                 buzzer);
+                                 buzzer,
+                                 thermalRisk);
 }
  
 void updateStatusLeds(unsigned long now) {
@@ -559,6 +570,18 @@ GasLevel evaluateGasLevel(const GasSensorState& sensor) {
   }
   return GasLevel::Safe;
 }
+
+bool hasThermalRisk(float temperatureC, GasLevel gasLevel) {
+  if (!isfinite(temperatureC) || gasLevel == GasLevel::Safe) {
+    return false;
+  }
+
+  const bool highTemperature = temperatureC >= kThermalRiskAbsoluteTempC;
+  const bool rapidRise = isfinite(gLastTemperatureC) &&
+                         (temperatureC - gLastTemperatureC) >= kThermalRiskTempRiseC;
+
+  return highTemperature || rapidRise;
+}
  
 void sampleGasSensor(GasSensorState& sensor) {
   sensor.raw = analogRead(sensor.analogPin);
@@ -711,15 +734,6 @@ void loop() {
     if (gDetectionPaused) {
       return;
     }
-    gLastGasLevel = gGasLevel;
-    gGasLevel = confirmGasLevel(gSen0565Sensor.level, gSen0565Sensor.extreme);
-    gGasDetected = gGasLevel == GasLevel::Danger;
-    if (gGasDetected && gLastGasLevel != GasLevel::Danger) {
-      startDangerAlarm(now);
-    }
-    updateDangerAlarm(now);
-    updateStatusLeds(now);
- 
     if (gBmeReady) {
       temperatureC = gBme.readTemperature();
       humidityPct = gBme.readHumidity();
@@ -729,6 +743,23 @@ void loop() {
                     gBmeAddress, temperatureC, humidityPct, pressureHpa);
     } else {
       Serial.println("BME280 not ready");
+    }
+
+    gLastGasLevel = gGasLevel;
+    gGasLevel = confirmGasLevel(gSen0565Sensor.level, gSen0565Sensor.extreme);
+    const bool thermalRisk = hasThermalRisk(temperatureC, gGasLevel);
+    if (thermalRisk) {
+      gGasLevel = GasLevel::Danger;
+      Serial.println("Thermal risk escalation: gas present with abnormal temperature rise/high temperature");
+    }
+    gGasDetected = gGasLevel == GasLevel::Danger;
+    if (gGasDetected && gLastGasLevel != GasLevel::Danger) {
+      startDangerAlarm(now);
+    }
+    updateDangerAlarm(now);
+    updateStatusLeds(now);
+    if (isfinite(temperatureC)) {
+      gLastTemperatureC = temperatureC;
     }
  
     printGasSensor(gSen0565Sensor);
@@ -767,7 +798,8 @@ void loop() {
                              humidityPct,
                              stateName,
                              fanOn,
-                             buzzerOn);
+                             buzzerOn,
+                             thermalRisk);
  
       if (shouldUploadAlertHistory ||
           gLastFirebaseHistoryMs == 0 ||
@@ -779,7 +811,8 @@ void loop() {
                                     humidityPct,
                                     stateName,
                                     fanOn,
-                                    buzzerOn)) {
+                                    buzzerOn,
+                                    thermalRisk)) {
           gLastFirebaseHistoryMs = now;
         }
       }

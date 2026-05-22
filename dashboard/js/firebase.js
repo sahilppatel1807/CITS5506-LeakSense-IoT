@@ -4,7 +4,6 @@
 * - leaksense/latest  → live reading (every 5s from ESP32)
 * - leaksense/history → one entry every 5 minutes, kept for 24 hours
 */
- 
 const firebaseConfig = {
   apiKey:            "AIzaSyCbKMj2SODj0h8ywLfhknlg5nFAK1MGyEw",
   authDomain:        "leaksense-iot.firebaseapp.com",
@@ -36,7 +35,7 @@ function normaliseReading(data) {
   const ppm   = numberFrom(data.ppm_compensated, data.ppm, data.gas_ppm, data.gas, data.value);
   const suppliedVoltage = numberFrom(data.voltage, data.gas_voltage, data.voltage_v, data.sensor_voltage);
   const voltage = suppliedVoltage > 0 ? suppliedVoltage : gasVoltageFromPpm(ppm);
-  const state = getStateFromVoltage(voltage);
+  const state = mostSevereState(data.state, getStateFromVoltage(voltage));
   const alarmActive = state === 'danger' || state === 'extreme';
  
   return {
@@ -46,6 +45,7 @@ function normaliseReading(data) {
     temperature:     numberFrom(data.temperature, data.temp),
     humidity:        numberFrom(data.humidity, data.hum),
     state,
+    thermal_risk: data.thermal_risk === undefined ? booleanFrom(data.thermalRisk) : booleanFrom(data.thermal_risk),
     fan:    data.fan    === undefined ? alarmActive : booleanFrom(data.fan),
     buzzer: data.buzzer === undefined ? alarmActive : booleanFrom(data.buzzer),
     timestamp: numberFrom(data.timestamp, data.time, Date.now()),
@@ -119,5 +119,3 @@ function listenToSensorData(callback) {
     callback(normaliseReading(data));
   });
 }
- 
- 

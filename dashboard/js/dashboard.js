@@ -31,6 +31,19 @@ function getStateFromVoltage(voltage) {
   if (value >= VOLTAGE_THRESHOLDS.warning) return 'warning';
   return 'safe';
 }
+
+const STATE_SEVERITY = { safe: 0, warning: 1, danger: 2, extreme: 3 };
+
+function normaliseStateName(state) {
+  const value = String(state || '').trim().toLowerCase();
+  return STATE_SEVERITY[value] === undefined ? 'safe' : value;
+}
+
+function mostSevereState(...states) {
+  return states
+    .map(normaliseStateName)
+    .sort((a, b) => STATE_SEVERITY[b] - STATE_SEVERITY[a])[0] || 'safe';
+}
  
 function gasVoltageFromPpm(ppm) {
   const value = Number(ppm);
@@ -164,11 +177,13 @@ async function showLeakSenseNotification(title, options, registration = null) {
   return new Notification(title, options);
 }
 
-function sendAlertNotification(voltage, state) {
+function sendAlertNotification(voltage, state, thermalRisk = false) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
  
   const title = NOTIFICATION_TITLES[state] || 'LeakSense alert';
-  const body = `${formatVoltage(voltage)} detected. ${STATE_MESSAGES[state]}`;
+  const body = thermalRisk
+    ? `${formatVoltage(voltage)} detected with abnormal temperature rise. ${STATE_MESSAGES.danger}`
+    : `${formatVoltage(voltage)} detected. ${STATE_MESSAGES[state]}`;
 
   showLeakSenseNotification(title, {
       body,
@@ -194,7 +209,9 @@ function updateStateBar(state) {
  
 function updateMetrics(data) {
   document.getElementById('ppmVal').textContent  = formatVoltage(data.voltage);
-  document.getElementById('ppmSub').textContent  = VOLTAGE_SUBS[data.state];
+  document.getElementById('ppmSub').textContent  = data.thermal_risk
+    ? 'Danger: gas + thermal risk'
+    : VOLTAGE_SUBS[data.state];
   document.getElementById('tempVal').textContent = `${data.temperature}°C`;
   document.getElementById('humVal').textContent  = `${data.humidity}%`;
   document.getElementById('lastSync').textContent = `Last sync: ${formatTime(getReadingDate(data.timestamp))}`;
@@ -232,7 +249,7 @@ function updateDeviceStates(data) {
  
 // ── UI — alert log ─────────────────────────────────────────────────────────────
  
-function addAlertEntry(voltage, state) {
+function addAlertEntry(voltage, state, thermalRisk = false) {
   const time = formatTime();
   const formattedVoltage = formatVoltage(voltage);
   const labels = {
@@ -240,7 +257,9 @@ function addAlertEntry(voltage, state) {
     danger:  'DANGER threshold crossed',
     extreme: 'EXTREME threshold crossed',
   };
-  const msg = `Gas reached ${formattedVoltage} — ${labels[state] || 'Alert threshold crossed'}`;
+  const msg = thermalRisk
+    ? `Gas reached ${formattedVoltage} — thermal risk escalation`
+    : `Gas reached ${formattedVoltage} — ${labels[state] || 'Alert threshold crossed'}`;
  
   alertLog.unshift({ time, voltage, state, msg });
   if (alertLog.length > 20) alertLog.pop();
@@ -378,7 +397,7 @@ function onNewReading(data) {
   if (!Number.isFinite(voltage)) {
     data.voltage = gasVoltageFromPpm(data.ppm_compensated);
   }
-  data.state = getStateFromVoltage(data.voltage);
+  data.state = mostSevereState(data.state, getStateFromVoltage(data.voltage));
  
   updateStatusBadge(data.state);
   updateStateBar(data.state);
@@ -387,8 +406,8 @@ function onNewReading(data) {
   updateChart(data.voltage, time);  // charts.js
  
   if (data.state !== 'safe' && data.state !== prevState) {
-    addAlertEntry(data.voltage, data.state);
-    sendAlertNotification(data.voltage, data.state);
+    addAlertEntry(data.voltage, data.state, data.thermal_risk);
+    sendAlertNotification(data.voltage, data.state, data.thermal_risk);
   }
  
   prevState = data.state;
