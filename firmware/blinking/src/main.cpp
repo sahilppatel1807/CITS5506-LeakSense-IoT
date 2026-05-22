@@ -29,6 +29,8 @@ constexpr unsigned long kBlinkIntervalMs = 500;
 constexpr unsigned long kRedBlinkIntervalMs = 75;
 constexpr unsigned long kSensorReadIntervalMs = 2000;
 constexpr unsigned long kFirebaseHistoryIntervalMs = 300000;
+constexpr unsigned long kWifiConnectTimeoutMs = 15000;
+constexpr unsigned long kWifiRetryIntervalMs = 30000;
 constexpr unsigned long kGasBaselineDurationMs = 10000;
 constexpr unsigned long kLedSelfTestIntervalMs = 500;
 constexpr unsigned long kDangerAlarmDurationMs = 10000;
@@ -36,8 +38,8 @@ constexpr unsigned long kDetectionPauseDurationMs = 10000;
 constexpr float kSen0565WarningVoltageThresholdV = 1.60f;
 constexpr float kSen0565DangerVoltageThresholdV = 1.90f;
 constexpr float kSen0565ExtremeVoltageThresholdV = 2.20f;
-constexpr float kThermalRiskTempRiseC = 5.0f;
-constexpr float kThermalRiskAbsoluteTempC = 55.0f;
+constexpr float kThermalRiskTempRiseC = 4.0f;
+constexpr float kThermalRiskAbsoluteTempC = 33.0f;
 constexpr uint8_t kGasLevelConfirmReads = 5;
 constexpr bool kAlarmOutputActiveLow = true;
 constexpr bool kFanRelayActiveLow = true;
@@ -77,6 +79,9 @@ uint8_t gDisplayAddress = 0;
 uint8_t gBmeAddress = 0;
  
 bool gWiFiConnected = false;
+bool gWiFiConnecting = false;
+unsigned long gWiFiConnectStartMs = 0;
+unsigned long gLastWiFiAttemptMs = 0;
  
 bool gLedOn = false;
  
@@ -139,6 +144,8 @@ void handleAlarmCancelButton(unsigned long now);
 void updateDangerAlarm(unsigned long now);
 void updateStatusLeds(unsigned long now);
 void serviceAlarmControls(unsigned long now);
+void startWiFiConnection(unsigned long now);
+void serviceWiFi(unsigned long now);
  
 void startDangerAlarm(unsigned long now) {
   gDangerAlarmActive = true;
@@ -216,33 +223,48 @@ void runLedSelfTest() {
   setStatusLeds(false, false, false);
 }
  
-bool connectToWiFi() {
-  if (WiFi.status() == WL_CONNECTED) {
-    return true;
+void startWiFiConnection(unsigned long now) {
+  if (WiFi.status() == WL_CONNECTED || gWiFiConnecting) {
+    return;
   }
- 
-  Serial.printf("Connecting to WiFi SSID='%s'...\r\n", WIFI_SSID);
+
+  Serial.printf("Starting WiFi connection to SSID='%s'...\r\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
- 
-  unsigned long start = millis();
-  while (millis() - start < 15000) {
-    if (WiFi.status() == WL_CONNECTED) {
+  gWiFiConnecting = true;
+  gWiFiConnectStartMs = now;
+  gLastWiFiAttemptMs = now;
+}
+
+void serviceWiFi(unsigned long now) {
+  const wl_status_t status = WiFi.status();
+
+  if (status == WL_CONNECTED) {
+    if (!gWiFiConnected) {
       Serial.printf("WiFi connected, IP=%s\r\n", WiFi.localIP().toString().c_str());
-      gWiFiConnected = true;
-      return true;
     }
-    Serial.print('.');
-    for (uint8_t i = 0; i < 10 && WiFi.status() != WL_CONNECTED; ++i) {
-      serviceAlarmControls(millis());
-      delay(50);
-    }
+    gWiFiConnected = true;
+    gWiFiConnecting = false;
+    return;
   }
- 
-  Serial.println();
-  Serial.println("WiFi connection failed");
+
+  if (gWiFiConnected) {
+    Serial.println("WiFi disconnected. Local monitoring continues; Firebase upload paused.");
+  }
   gWiFiConnected = false;
-  return false;
+
+  if (gWiFiConnecting) {
+    if (now - gWiFiConnectStartMs >= kWifiConnectTimeoutMs) {
+      Serial.println("WiFi connection timed out. Local monitoring continues; will retry later.");
+      WiFi.disconnect(false);
+      gWiFiConnecting = false;
+    }
+    return;
+  }
+
+  if (gLastWiFiAttemptMs == 0 || now - gLastWiFiAttemptMs >= kWifiRetryIntervalMs) {
+    startWiFiConnection(now);
+  }
 }
  
 float gasRatio(const GasSensorState& sensor);
@@ -571,8 +593,8 @@ GasLevel evaluateGasLevel(const GasSensorState& sensor) {
   return GasLevel::Safe;
 }
 
-bool hasThermalRisk(float temperatureC, GasLevel gasLevel) {
-  if (!isfinite(temperatureC) || gasLevel == GasLevel::Safe) {
+bool hasThermalRisk(float temperatureC) {
+  if (!isfinite(temperatureC)) {
     return false;
   }
 
@@ -707,16 +729,14 @@ void setup() {
   Serial.println("Keep SEN0565 in clean air for the first 10 seconds.");
   Serial.println("Warm SEN0565 for at least 5 minutes before trusting its thresholds.");
  
-  if (connectToWiFi()) {
-    Serial.println("WiFi connected, ready for Firebase upload.");
-  } else {
-    Serial.println("WiFi not connected. Will retry in loop().");
-  }
+  startWiFiConnection(millis());
+  Serial.println("WiFi will connect in background. Local monitoring is available offline.");
 }
  
 void loop() {
   const unsigned long now = millis();
   serviceAlarmControls(now);
+  serviceWiFi(now);
  
   if (now - gLastBlinkMs >= kBlinkIntervalMs) {
     gLastBlinkMs = now;
@@ -747,10 +767,10 @@ void loop() {
 
     gLastGasLevel = gGasLevel;
     gGasLevel = confirmGasLevel(gSen0565Sensor.level, gSen0565Sensor.extreme);
-    const bool thermalRisk = hasThermalRisk(temperatureC, gGasLevel);
+    const bool thermalRisk = hasThermalRisk(temperatureC);
     if (thermalRisk) {
       gGasLevel = GasLevel::Danger;
-      Serial.println("Thermal risk escalation: gas present with abnormal temperature rise/high temperature");
+      Serial.println("Thermal risk escalation: abnormal temperature rise/high temperature");
     }
     gGasDetected = gGasLevel == GasLevel::Danger;
     if (gGasDetected && gLastGasLevel != GasLevel::Danger) {
@@ -776,12 +796,6 @@ void loop() {
  
  
  
-    if (!gWiFiConnected) {
-      if (connectToWiFi()) {
-        Serial.println("WiFi reconnected in loop().");
-      }
-    }
- 
     const float ppmCompensated = estimatePpm(gSen0565Sensor);
     const float ppmRaw = gSen0565Sensor.raw * 0.25f;
     const char* stateName = gasLevelName(gGasLevel);
@@ -790,7 +804,7 @@ void loop() {
     const bool shouldUploadAlertHistory =
         gGasLevel == GasLevel::Warning || gGasLevel == GasLevel::Danger;
  
-    if (gWiFiConnected) {
+    if (WiFi.status() == WL_CONNECTED) {
       uploadLatestToFirebase(ppmCompensated,
                              ppmRaw,
                              gSen0565Sensor.voltage,
