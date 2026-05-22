@@ -43,6 +43,7 @@ function getMockReading() {
     temperature:     parseFloat((22 + Math.random() * 2).toFixed(1)),
     humidity:        parseFloat((45 + Math.random() * 5).toFixed(1)),
     state:           state,
+    thermal_risk:    false,
     fan:             state !== 'safe',
     buzzer:          state !== 'safe',
     timestamp:       Date.now(),
