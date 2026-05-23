@@ -37,6 +37,8 @@ function getMockReading() {
   const ppm   = addNoise(mockBasePpm);
   const state = getStateFromPpm(ppm);
 
+  // Keep the mock payload aligned with the ESP32/Firebase payload so the same
+  // dashboard code is exercised during offline development.
   return {
     ppm_compensated: ppm,
     ppm_raw:         Math.round(ppm * 1.08),  // raw is slightly higher before compensation

@@ -19,10 +19,12 @@ const MAX_HISTORY_ROWS = 288; // 24hr at 1 reading per 5 min
  
 // ── Helpers ────────────────────────────────────────────────────────────────────
  
+// Converts gas ppm into the same display state logic used by voltage readings.
 function getStateFromPpm(ppm) {
   return getStateFromVoltage(gasVoltageFromPpm(ppm));
 }
  
+// Dashboard display state is voltage-based to match the ESP32 thresholds.
 function getStateFromVoltage(voltage) {
   const value = Number(voltage);
   if (!Number.isFinite(value)) return 'safe';
@@ -34,17 +36,21 @@ function getStateFromVoltage(voltage) {
 
 const STATE_SEVERITY = { safe: 0, warning: 1, danger: 2, extreme: 3 };
 
+// Normalises input from Firebase or mock data before severity comparison.
 function normaliseStateName(state) {
   const value = String(state || '').trim().toLowerCase();
   return STATE_SEVERITY[value] === undefined ? 'safe' : value;
 }
 
+// Keeps the most severe state when the firmware state and dashboard voltage
+// classification disagree, preventing a serious reading from being hidden.
 function mostSevereState(...states) {
   return states
     .map(normaliseStateName)
     .sort((a, b) => STATE_SEVERITY[b] - STATE_SEVERITY[a])[0] || 'safe';
 }
  
+// Provides a voltage estimate for mock or legacy ppm-only readings.
 function gasVoltageFromPpm(ppm) {
   const value = Number(ppm);
   if (!Number.isFinite(value) || value <= 0) return 0;
@@ -113,6 +119,8 @@ const NOTIFICATION_TITLES = {
 
 let notificationRegistrationPromise = null;
 
+// Registers the service worker once and reuses the ready registration for
+// all later notifications.
 function getNotificationRegistration() {
   if (!('serviceWorker' in navigator)) return Promise.resolve(null);
 
@@ -125,6 +133,7 @@ function getNotificationRegistration() {
   return notificationRegistrationPromise;
 }
 
+// Enables browser notifications from a user click, as required by browser policy.
 function setupAlertNotifications() {
   const btn = document.getElementById('enableNotificationsBtn');
   if (!btn || !('Notification' in window)) return;
@@ -167,6 +176,8 @@ function setupAlertNotifications() {
   syncButton();
 }
 
+// Sends via service worker where possible so notifications still work when the
+// page is in the background.
 async function showLeakSenseNotification(title, options, registration = null) {
   const serviceWorkerRegistration = registration || await getNotificationRegistration();
 
@@ -177,6 +188,8 @@ async function showLeakSenseNotification(title, options, registration = null) {
   return new Notification(title, options);
 }
 
+// Creates Warning, Danger, and Extreme notifications with stronger persistence
+// for the more serious alert states.
 function sendAlertNotification(voltage, state, thermalRisk = false) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
  
@@ -195,18 +208,21 @@ function sendAlertNotification(voltage, state, thermalRisk = false) {
   });
 }
  
+// Updates the coloured status badge in the top bar.
 function updateStatusBadge(state) {
   const el = document.getElementById('statusBadge');
   el.className  = `status-badge ${state}`;
   el.textContent = state.charAt(0).toUpperCase() + state.slice(1);
 }
  
+// Updates the full-width message bar below the header.
 function updateStateBar(state) {
   const el = document.getElementById('stateBar');
   el.className  = `state-bar ${state}`;
   el.textContent = STATE_MESSAGES[state];
 }
  
+// Updates the four top metric cards from the latest reading.
 function updateMetrics(data) {
   document.getElementById('ppmVal').textContent  = formatVoltage(data.voltage);
   document.getElementById('ppmSub').textContent  = data.thermal_risk
@@ -391,6 +407,8 @@ function setupDashboardViews() {
  
 // ── Main update — called on every live reading ─────────────────────────────────
  
+// Single entry point for live data. Every Firebase or mock reading flows through
+// here before updating badges, metrics, device states, charts, alerts, and notifications.
 function onNewReading(data) {
   const time = formatTime(getReadingDate(data.timestamp));
   const voltage = Number(data.voltage);
@@ -416,6 +434,8 @@ function onNewReading(data) {
 // ── Initialise ─────────────────────────────────────────────────────────────────
  
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialise visual components before attaching Firebase listeners so the
+  // first incoming reading has a chart and DOM to update.
   initChart();         // live chart — charts.js
   initHistoryChart();  // 24hr chart — charts.js
   setupDashboardViews();

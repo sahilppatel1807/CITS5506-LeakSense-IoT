@@ -7,7 +7,14 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_BME280.h>
 #include "secrets.h"
- 
+
+// LeakSense firmware:
+// - Samples the SEN0565 gas sensor and BME280 environmental sensor.
+// - Classifies gas risk into Safe, Warning, and Danger states.
+// - Drives local outputs first, then uploads telemetry to Firebase if Wi-Fi is available.
+
+// Hardware pin mapping and calibration constants are kept together so the
+// wiring and threshold values can be audited easily from one place.
 constexpr uint8_t kLedPin = D9;
 constexpr uint8_t kGreenLedPin = 17;
 constexpr uint8_t kRedLedPin = 4;
@@ -46,13 +53,17 @@ constexpr bool kFanRelayActiveLow = true;
 constexpr float kGasBaselineFollowAlpha = 0.02f;
 constexpr float kGasBaselineSettleDeltaV = 0.05f;
 constexpr float kGasBaselineSettleRatio = 1.03f;
- 
+
+// Firmware-level gas state. The dashboard later labels very high Danger
+// readings as "Extreme", but the ESP32 treats them as Danger for actuation.
 enum class GasLevel {
   Safe,
   Warning,
   Danger,
 };
- 
+
+// Runtime state for the SEN0565 sensor, including live readings and clean-air
+// baseline values used for drift tracking and rough ppm estimation.
 struct GasSensorState {
   const char* name;
   int analogPin;
@@ -114,7 +125,9 @@ GasSensorState gSen0565Sensor = {"SEN0565",
                                  GasLevel::Safe,
                                  false,
                                  false};
- 
+
+// Converts the internal enum into the string stored in Serial output,
+// Firebase records, OLED status, and dashboard state handling.
 const char* gasLevelName(GasLevel level) {
   switch (level) {
     case GasLevel::Danger:
@@ -126,7 +139,9 @@ const char* gasLevelName(GasLevel level) {
       return "SAFE";
   }
 }
- 
+
+// Relay and buzzer modules are active-low in this prototype, so these helpers
+// hide the polarity and let the rest of the firmware use true/false safely.
 void setAlarmOutput(bool enabled) {
   const uint8_t activeState = kAlarmOutputActiveLow ? LOW : HIGH;
   const uint8_t inactiveState = kAlarmOutputActiveLow ? HIGH : LOW;
@@ -146,7 +161,9 @@ void updateStatusLeds(unsigned long now);
 void serviceAlarmControls(unsigned long now);
 void startWiFiConnection(unsigned long now);
 void serviceWiFi(unsigned long now);
- 
+
+// Starts one local Danger response cycle. This happens before any Firebase
+// upload so local safety action does not depend on the network.
 void startDangerAlarm(unsigned long now) {
   gDangerAlarmActive = true;
   gDangerAlarmStartMs = now;
@@ -155,7 +172,8 @@ void startDangerAlarm(unsigned long now) {
   setAlarmOutput(true);
   setFanRelay(true);
 }
- 
+
+// Clears the current alarm cycle and returns the visible outputs to Safe.
 void stopDangerAlarm() {
   gDangerAlarmActive = false;
   gGasDetected = false;
@@ -167,7 +185,9 @@ void stopDangerAlarm() {
   setFanRelay(false);
   setStatusLeds(true, false, false);
 }
- 
+
+// User acknowledgement silences the alarm temporarily, but monitoring resumes
+// automatically after the pause window.
 void startDetectionPause(unsigned long now) {
   stopDangerAlarm();
   gDetectionPaused = true;
@@ -222,7 +242,9 @@ void runLedSelfTest() {
   delay(kLedSelfTestIntervalMs);
   setStatusLeds(false, false, false);
 }
- 
+
+// Wi-Fi is managed non-blockingly so sensor sampling and actuator control keep
+// running even when the router is unavailable.
 void startWiFiConnection(unsigned long now) {
   if (WiFi.status() == WL_CONNECTED || gWiFiConnecting) {
     return;
@@ -271,6 +293,8 @@ float gasRatio(const GasSensorState& sensor);
 float gasNormalizedRatio(const GasSensorState& sensor);
 float gasDeltaMagnitude(const GasSensorState& sensor);
 
+// The SEN0565 output is qualitative, so this ppm estimate is only for display.
+// Safety decisions are made from voltage thresholds, not from this estimate.
 float estimatePpm(const GasSensorState& sensor) {
   if (!sensor.baselineReady || sensor.baselineVoltage <= 0.0f) {
     return 0.0f;
@@ -285,14 +309,17 @@ float estimatePpm(const GasSensorState& sensor) {
   }
   return 300.0f + (ratio - 2.2f) * 500.0f;
 }
- 
+
+// Firebase does not accept NaN or Infinity, so invalid sensor values are sent
+// as JSON null instead of malformed numeric text.
 String jsonFloat(float value, unsigned int decimalPlaces) {
   if (isnan(value) || isinf(value)) {
     return "null";
   }
   return String(value, decimalPlaces);
 }
- 
+
+// Builds the JSON payload shared by latest and history uploads.
 String firebasePayload(float ppm,
                        float rawPpm,
                        float gasVoltage,
@@ -316,7 +343,9 @@ String firebasePayload(float ppm,
   payload += "}";
   return payload;
 }
- 
+
+// Sends one reading to Firebase. PUT updates leaksense/latest, while POST
+// appends a new record under leaksense/history.
 bool uploadReadingToFirebase(const char* node,
                              bool append,
                              float ppmCompensated,
@@ -370,7 +399,8 @@ bool uploadReadingToFirebase(const char* node,
   http.end();
   return false;
 }
- 
+
+// Latest is the live value used by the dashboard's real-time listener.
 bool uploadLatestToFirebase(float ppmCompensated,
                             float ppmRaw,
                             float gasVoltage,
@@ -392,7 +422,8 @@ bool uploadLatestToFirebase(float ppmCompensated,
                                  buzzer,
                                  thermalRisk);
 }
- 
+
+// History is sampled less frequently, plus every alert, to support 24-hour review.
 bool uploadHistoryToFirebase(float ppmCompensated,
                              float ppmRaw,
                              float gasVoltage,
@@ -414,7 +445,8 @@ bool uploadHistoryToFirebase(float ppmCompensated,
                                  buzzer,
                                  thermalRisk);
 }
- 
+
+// Applies LED states for Safe, Warning, Danger, and the temporary pause mode.
 void updateStatusLeds(unsigned long now) {
   if (gDetectionPaused) {
     updateDetectionPause(now);
@@ -444,12 +476,14 @@ void updateStatusLeds(unsigned long now) {
   }
 }
 
+// Runs the high-priority controls on every loop pass and during ADC averaging.
 void serviceAlarmControls(unsigned long now) {
   handleAlarmCancelButton(now);
   updateDangerAlarm(now);
   updateStatusLeds(now);
 }
- 
+
+// GPIO14 is wired with INPUT_PULLUP, so LOW means the button is pressed.
 void handleAlarmCancelButton(unsigned long now) {
   const bool pressed = digitalRead(kAlarmCancelButtonPin) == LOW;
   if (!pressed) {
@@ -465,7 +499,9 @@ void handleAlarmCancelButton(unsigned long now) {
   Serial.println("GPIO14 button pressed: alarm stopped; gas detection paused for 10 seconds");
   startDetectionPause(now);
 }
- 
+
+// Danger is confirmed across several readings to avoid noisy single-sample
+// spikes, while Extreme voltage still escalates immediately.
 GasLevel confirmGasLevel(GasLevel newLevel, bool extremeDanger) {
   if (newLevel == GasLevel::Safe) {
     gPendingGasLevel = GasLevel::Safe;
@@ -498,7 +534,8 @@ GasLevel confirmGasLevel(GasLevel newLevel, bool extremeDanger) {
  
   return GasLevel::Warning;
 }
- 
+
+// Prints detected I2C addresses to help debug OLED and BME280 wiring.
 void scanI2CBus(TwoWire& bus, const char* label) {
   Serial.printf("Scanning %s I2C bus...\r\n", label);
   for (uint8_t address = 1; address < 127; ++address) {
@@ -528,7 +565,9 @@ bool initBme() {
   }
   return false;
 }
- 
+
+// Averages 32 ADC samples to smooth sensor noise. Alarm controls are serviced
+// during the short sample delay so the cancel button remains responsive.
 float readAnalogVoltage(int analogPin) {
   uint32_t total = 0;
   for (uint8_t i = 0; i < kGasSamplesPerRead; ++i) {
@@ -541,6 +580,8 @@ float readAnalogVoltage(int analogPin) {
   return raw * 3.3f / 4095.0f;
 }
 
+// Learns a clean-air baseline during startup, then follows slow drift only
+// while readings remain close to normal.
 void updateGasBaseline(GasSensorState& sensor) {
   if (sensor.baselineVoltage <= 0.0f) {
     sensor.baselineVoltage = sensor.voltage;
@@ -564,6 +605,7 @@ void updateGasBaseline(GasSensorState& sensor) {
   }
 }
 
+// Ratio helpers compare the live gas voltage against the learned baseline.
 float gasRatio(const GasSensorState& sensor) {
   return sensor.baselineVoltage > 0.01f ? sensor.voltage / sensor.baselineVoltage : 0.0f;
 }
@@ -580,6 +622,7 @@ float gasDeltaMagnitude(const GasSensorState& sensor) {
   return fabsf(sensor.voltage - sensor.baselineVoltage);
 }
 
+// Converts voltage thresholds into the local safety state.
 GasLevel evaluateGasLevel(const GasSensorState& sensor) {
   if (sensor.voltage >= sensor.extremeVoltageThresholdV) {
     return GasLevel::Danger;
@@ -593,6 +636,8 @@ GasLevel evaluateGasLevel(const GasSensorState& sensor) {
   return GasLevel::Safe;
 }
 
+// Adds the second-sensor escalation rule: gas risk plus abnormal temperature
+// rise or high absolute temperature becomes Danger.
 bool hasThermalRisk(float temperatureC) {
   if (!isfinite(temperatureC)) {
     return false;
@@ -604,7 +649,8 @@ bool hasThermalRisk(float temperatureC) {
 
   return highTemperature || rapidRise;
 }
- 
+
+// Reads and updates all SEN0565 fields used by classification, Firebase, and OLED.
 void sampleGasSensor(GasSensorState& sensor) {
   sensor.raw = analogRead(sensor.analogPin);
   sensor.voltage = readAnalogVoltage(sensor.analogPin);
@@ -615,6 +661,7 @@ void sampleGasSensor(GasSensorState& sensor) {
   sensor.detected = sensor.level == GasLevel::Danger;
 }
 
+// Serial output is used during bench testing to verify threshold transitions.
 void printGasSensor(const GasSensorState& sensor) {
   if (sensor.baselineReady) {
     const float signedDelta = sensor.voltage - sensor.baselineVoltage;
@@ -635,7 +682,9 @@ void printGasSensor(const GasSensorState& sensor) {
                   sensor.voltage);
   }
 }
- 
+
+// Local OLED display mirrors the main safety state so the hardware remains
+// understandable even without the web dashboard.
 void drawStatusScreen(float temperatureC,
                       float humidityPct,
                       float pressureHpa,
@@ -676,7 +725,8 @@ void drawStatusScreen(float temperatureC,
  
   display.display();
 }
- 
+
+// Initialises GPIO, sensors, display, ADC settings, Wi-Fi, and safe output states.
 void setup() {
   Serial.begin(115200);
   pinMode(kLedPin, OUTPUT);
@@ -696,12 +746,7 @@ void setup() {
   analogSetPinAttenuation(kSen0565AnalogPin, ADC_11db);
   gStartMs = millis();
   delay(200);
- 
- 
- 
- 
- 
- 
+
   Serial.printf("OLED test starting (SDA=%u, SCL=%u)\r\n", kOledSdaPin, kOledSclPin);
   gOledWire.begin(kOledSdaPin, kOledSclPin);
   scanI2CBus(gOledWire, "OLED");
@@ -732,7 +777,9 @@ void setup() {
   startWiFiConnection(millis());
   Serial.println("WiFi will connect in background. Local monitoring is available offline.");
 }
- 
+
+// Main cooperative scheduler. Local controls run continuously; sensor sampling,
+// state classification, Firebase upload, and OLED refresh run every two seconds.
 void loop() {
   const unsigned long now = millis();
   serviceAlarmControls(now);
@@ -788,14 +835,9 @@ void loop() {
                   gasLevelName(gGasLevel),
                   gDangerAlarmActive ? "ON" : "off",
                   gDangerAlarmActive ? "ON" : "off");
- 
- 
- 
- 
- 
- 
- 
- 
+
+    // Upload latest every cycle for live dashboard display. Append history only
+    // every five minutes or immediately when a Warning/Danger event occurs.
     const float ppmCompensated = estimatePpm(gSen0565Sensor);
     const float ppmRaw = gSen0565Sensor.raw * 0.25f;
     const char* stateName = gasLevelName(gGasLevel);
