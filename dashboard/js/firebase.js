@@ -1,21 +1,21 @@
 /**
 * firebase.js
 * Firebase Realtime Database connection.
-* - leaksense/latest  → live reading (every 5s from ESP32)
+* - leaksense/latest  → live reading (every 2s from ESP32)
 * - leaksense/history → one entry every 5 minutes, kept for 24 hours
 */
-const firebaseConfig = {
-  apiKey:            "AIzaSyCbKMj2SODj0h8ywLfhknlg5nFAK1MGyEw",
-  authDomain:        "leaksense-iot.firebaseapp.com",
-  databaseURL:       "https://leaksense-iot-default-rtdb.firebaseio.com",
-  projectId:         "leaksense-iot",
-  storageBucket:     "leaksense-iot.firebasestorage.app",
-  messagingSenderId: "634659563301",
-  appId:             "1:634659563301:web:2652686e881e94a47b5ccc"
-};
- 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const firebaseConfig = window.LEAKSENSE_FIREBASE_CONFIG;
+const hasFirebaseConfig = firebaseConfig && Object.values(firebaseConfig).every(value =>
+  typeof value === 'string' && value.trim() !== '' && !value.includes('YOUR_')
+);
+
+if (hasFirebaseConfig) {
+  firebase.initializeApp(firebaseConfig);
+} else {
+  console.warn('Firebase config missing. Copy js/secrets.example.js to js/secrets.js and fill it in.');
+}
+
+const db = hasFirebaseConfig ? firebase.database() : null;
  
 // ── Helpers ────────────────────────────────────────────────────────────────────
  
@@ -72,6 +72,11 @@ const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 * @param {function} callback - receives array of normalised reading objects
 */
 function loadHistory(callback) {
+  if (!db) {
+    callback([]);
+    return;
+  }
+
   const cutoff = Date.now() - TWENTY_FOUR_HOURS_MS;
  
   db.ref('leaksense/history')
@@ -94,6 +99,8 @@ function loadHistory(callback) {
 * @param {function} callback - receives a single normalised reading
 */
 function listenToHistory(callback) {
+  if (!db) return false;
+
   const since = Date.now() - TWENTY_FOUR_HOURS_MS;
  
   db.ref('leaksense/history')
@@ -104,6 +111,8 @@ function listenToHistory(callback) {
       if (!data) return;
       callback(normaliseReading(data));
     });
+
+  return true;
 }
  
 // ── Live latest reading ────────────────────────────────────────────────────────
@@ -113,9 +122,13 @@ function listenToHistory(callback) {
 * @param {function} callback - onNewReading from dashboard.js
 */
 function listenToSensorData(callback) {
+  if (!db) return false;
+
   db.ref('leaksense/latest').on('value', snapshot => {
     const data = snapshot.val();
     if (!data) return;
     callback(normaliseReading(data));
   });
+
+  return true;
 }
