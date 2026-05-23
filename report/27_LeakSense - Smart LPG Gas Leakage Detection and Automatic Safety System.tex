@@ -17,6 +17,7 @@
 \usepackage{balance}
 \usepackage{float}
 \usepackage{listings}
+\usepackage{multicol}
 
 \lstdefinestyle{leaksensecode}{
   basicstyle=\ttfamily\scriptsize,
@@ -47,6 +48,21 @@
 }
 \lstset{style=leaksensecode}
 
+\lstdefinestyle{leaksensecodecompact}{
+  style=leaksensecode,
+  basicstyle=\ttfamily\tiny,
+  aboveskip=0.25em,
+  belowskip=0.25em,
+  abovecaptionskip=0.2em,
+  belowcaptionskip=0.2em,
+  frame=none,
+  numbers=left,
+  numbersep=4pt,
+  numberstyle=\fontsize{4.5}{5}\selectfont\color{gray},
+  xleftmargin=1.6em,
+  xrightmargin=0pt
+}
+
 \newcommand{\leaksenselisting}[4][]{%
   \refstepcounter{lstlisting}%
   \label{#3}%
@@ -54,6 +70,14 @@
     {\small Listing~\thelstlisting. #2}
   \end{center}
   \vspace{0.45em}
+  \lstinputlisting[#1]{#4}
+}
+
+\newcommand{\leaksensecompactlisting}[4][]{%
+  \refstepcounter{lstlisting}%
+  \label{#3}%
+  \noindent{\footnotesize\textbf{Listing~\thelstlisting. #2}}\par
+  \vspace{0.15em}
   \lstinputlisting[#1]{#4}
 }
 
@@ -1455,39 +1479,47 @@ Firebase data to those elements.
 \section{Source Code Listings}
 \label{sec:source-code-listings}
 
+\begingroup
+\setlength{\columnsep}{24pt}
+\setlength{\columnseprule}{0.3pt}
+\lstset{style=leaksensecodecompact}
+\begin{multicols}{2}
 
 \subsection{Firmware Source Code}
 
-\leaksenselisting[language=C++]{ESP32 firmware source code: firmware/blinking/src/main.cpp.}{lst:firmware-main}{../firmware/blinking/src/main.cpp}
+\leaksensecompactlisting[language=C++]{ESP32 firmware source code: firmware/blinking/src/main.cpp.}{lst:firmware-main}{../firmware/blinking/src/main.cpp}
 
 \subsection{PlatformIO Configuration}
 
-\leaksenselisting{PlatformIO configuration: firmware/blinking/platformio.ini.}{lst:platformio}{../firmware/blinking/platformio.ini}
+\leaksensecompactlisting{PlatformIO configuration: firmware/blinking/platformio.ini.}{lst:platformio}{../firmware/blinking/platformio.ini}
 
 \subsection{Credential Template}
 
-\leaksenselisting[language=C++]{Credential template: firmware/blinking/src/secrets.h.example.}{lst:secrets-example}{../firmware/blinking/src/secrets.h.example}
+\leaksensecompactlisting[language=C++]{Credential template: firmware/blinking/src/secrets.h.example.}{lst:secrets-example}{../firmware/blinking/src/secrets.h.example}
 
 \subsection{Dashboard HTML}
 
-\leaksenselisting{Dashboard HTML: dashboard/index.html.}{lst:dashboard-html}{../dashboard/index.html}
+\leaksensecompactlisting{Dashboard HTML: dashboard/index.html.}{lst:dashboard-html}{../dashboard/index.html}
 
 \subsection{Dashboard CSS}
 
-\leaksenselisting{Dashboard CSS: dashboard/css/style.css.}{lst:dashboard-css}{../dashboard/css/style.css}
+\leaksensecompactlisting{Dashboard CSS: dashboard/css/style.css.}{lst:dashboard-css}{../dashboard/css/style.css}
 
 \subsection{Dashboard JavaScript}
 
-\leaksenselisting{Dashboard Firebase credential template: dashboard/js/secrets.example.js.}{lst:dashboard-secrets-example}{../dashboard/js/secrets.example.js}
+\leaksensecompactlisting{Dashboard Firebase credential template: dashboard/js/secrets.example.js.}{lst:dashboard-secrets-example}{../dashboard/js/secrets.example.js}
 
-\leaksenselisting{Firebase JavaScript: dashboard/js/firebase.js.}{lst:firebase-js}{../dashboard/js/firebase.js}
+\leaksensecompactlisting{Firebase JavaScript: dashboard/js/firebase.js.}{lst:firebase-js}{../dashboard/js/firebase.js}
 
-\leaksenselisting{Main dashboard JavaScript: dashboard/js/dashboard.js.}{lst:dashboard-js}{../dashboard/js/dashboard.js}
+\leaksensecompactlisting{Main dashboard JavaScript: dashboard/js/dashboard.js.}{lst:dashboard-js}{../dashboard/js/dashboard.js}
 
-\leaksenselisting{Chart JavaScript: dashboard/js/charts.js.}{lst:charts-js}{../dashboard/js/charts.js}
+\leaksensecompactlisting{Chart JavaScript: dashboard/js/charts.js.}{lst:charts-js}{../dashboard/js/charts.js}
 
-\leaksenselisting{Mock data JavaScript: dashboard/js/mock.js.}{lst:mock-js}{../dashboard/js/mock.js}
+\leaksensecompactlisting{Mock data JavaScript: dashboard/js/mock.js.}{lst:mock-js}{../dashboard/js/mock.js}
 
-\leaksenselisting{Notification service worker: dashboard/service-worker.js.}{lst:service-worker-js}{../dashboard/service-worker.js}
+\leaksensecompactlisting{Notification service worker: dashboard/service-worker.js.}{lst:service-worker-js}{../dashboard/service-worker.js}
+
+\end{multicols}
+\endgroup
 
 \end{document}
