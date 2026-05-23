@@ -19,18 +19,23 @@ const db = hasFirebaseConfig ? firebase.database() : null;
  
 // ── Helpers ────────────────────────────────────────────────────────────────────
  
+// Accepts multiple possible field names so older Firebase records and firmware
+// payload changes still render correctly in the dashboard.
 function numberFrom(...values) {
   const found = values.find(v => v !== undefined && v !== null && v !== '');
   const n = Number(found);
   return Number.isFinite(n) ? n : 0;
 }
  
+// Firebase may store booleans as real booleans or strings depending on source.
 function booleanFrom(value) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string')  return value.toLowerCase() === 'true' || value.toLowerCase() === 'on';
   return Boolean(value);
 }
  
+// Converts a raw Firebase object into the one consistent reading shape used by
+// dashboard.js and charts.js.
 function normaliseReading(data) {
   const ppm   = numberFrom(data.ppm_compensated, data.ppm, data.gas_ppm, data.gas, data.value);
   const suppliedVoltage = numberFrom(data.voltage, data.gas_voltage, data.voltage_v, data.sensor_voltage);
@@ -52,6 +57,8 @@ function normaliseReading(data) {
   };
 }
  
+// Firebase history is stored as keyed objects. This helper turns the snapshot
+// into a sorted array so charts and tables display in time order.
 function snapshotToReadings(snapshot) {
   const value = snapshot.val();
   if (!value || typeof value !== 'object' || Array.isArray(value)) return [];

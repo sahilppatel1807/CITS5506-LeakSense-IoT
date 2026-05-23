@@ -181,10 +181,16 @@
 </div><!-- /.app -->
  
 <!-- JS — order matters -->
+<!-- mock.js is loaded first so the dashboard can fall back to simulated data
+     when Firebase credentials are not configured. -->
 <script src="js/mock.js"></script>
+<!-- charts.js exposes chart initialisation/update functions used by dashboard.js. -->
 <script src="js/charts.js"></script>
+<!-- secrets.js is local-only and defines window.LEAKSENSE_FIREBASE_CONFIG. -->
 <script src="js/secrets.js"></script>
+<!-- firebase.js listens to Realtime Database and normalises incoming readings. -->
 <script src="js/firebase.js"></script>
+<!-- dashboard.js wires UI events and updates the page from each reading. -->
 <script src="js/dashboard.js"></script>
  
 </body>

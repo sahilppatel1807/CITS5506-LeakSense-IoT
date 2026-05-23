@@ -16,6 +16,8 @@ let historyChart = null;
  
 // ── Live trend chart ───────────────────────────────────────────────────────────
  
+// Creates the live chart shown on the main dashboard. Three flat threshold
+// datasets are drawn beside the gas series for visual comparison.
 function initChart() {
   const ctx = document.getElementById('trendChart').getContext('2d');
  
@@ -96,6 +98,7 @@ function initChart() {
   });
 }
  
+// Appends one live voltage sample and trims the chart to the latest 60 readings.
 function updateChart(voltage, time) {
   const [gasData, warnData, dangerData, extremeData] = trendChart.data.datasets.map(d => d.data);
   const labels = trendChart.data.labels;
@@ -113,6 +116,7 @@ function updateChart(voltage, time) {
   trendChart.update('none');
 }
  
+// Clears all live chart points; useful during manual testing or future resets.
 function resetChart() {
   trendChart.data.labels = [];
   trendChart.data.datasets.forEach(d => { d.data = []; });
@@ -121,6 +125,8 @@ function resetChart() {
  
 // ── 24-hour history chart ──────────────────────────────────────────────────────
  
+// Creates the history chart with two axes: gas voltage on the left and
+// temperature/humidity on the right.
 function initHistoryChart() {
   const ctx = document.getElementById('historyChart').getContext('2d');
  
@@ -281,5 +287,3 @@ function populateHistoryChart(readings) {
  
   readings.forEach(r => addHistoryPoint(r));
 }
- 
- 

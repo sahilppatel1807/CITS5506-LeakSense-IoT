@@ -32,6 +32,7 @@ body {
 .topbar__sync  { font-size: 12px; color: #9ca3af; }
 
 .notification-btn {
+  /* Hidden until dashboard.js checks browser notification support. */
   border: 1px solid #c7d2fe;
   border-radius: 8px;
   background: #eef2ff;
@@ -72,6 +73,7 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 .status-badge::before {
+  /* Small status dot inherits the badge colour for Safe/Warning/Danger. */
   content: '';
   display: inline-block;
   width: 7px;
@@ -171,6 +173,7 @@ body {
  
 /* ── Chart card ───────────────────────────────────────────────────────────── */
 .chart-card canvas {
+  /* Fixed height prevents the live chart from resizing as points are added. */
   width: 100% !important;
   height: 200px !important;
 }
@@ -265,6 +268,7 @@ body {
 }
  
 .history-table thead th {
+  /* Sticky header keeps column names visible while scrolling 24-hour history. */
   position: sticky;
   top: 0;
   background: #f9fafb;
@@ -312,6 +316,7 @@ body {
  
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Tablet/mobile layout stacks the chart above device and alert panels. */
   .topbar {
     align-items: flex-start;
     gap: 12px;
