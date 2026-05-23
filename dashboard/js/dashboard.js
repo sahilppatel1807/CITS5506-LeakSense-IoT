@@ -421,10 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDashboardViews();
   setupAlertNotifications();
  
-  if (typeof listenToSensorData === 'function') {
+  if (typeof listenToSensorData === 'function' && listenToSensorData(onNewReading)) {
     // Live readings → dashboard
-    listenToSensorData(onNewReading);
- 
+
     // 24hr history → chart + table (initial load)
     loadHistory(readings => {
       populateHistoryChart(readings);   // charts.js
