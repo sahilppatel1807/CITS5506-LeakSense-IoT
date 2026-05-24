@@ -129,9 +129,9 @@ Residential LPG leakage is a serious household safety problem because
 accumulated gas can cause fire, explosion, and health hazards, yet affordable
 detectors typically provide only local alarms without physical mitigation or
 remote monitoring. This report presents LeakSense, a low-cost Internet of
-Things prototype that detects LPG risk, responds locally, and provides
+Things system that detects LPG risk, responds locally, and provides
 real-time cloud visibility. The system was developed using an iterative
-prototyping method and integrates an ESP32 microcontroller, a MEMS gas sensor,
+development method and integrates an ESP32 microcontroller, a MEMS gas sensor,
 a BME280 atmospheric sensor, relay-driven actuators, Firebase Realtime
 Database, and a browser dashboard. The firmware samples gas voltage every two
 seconds and classifies readings into Safe, Warning, Danger, and Extreme
@@ -142,8 +142,8 @@ live status, history logging, and browser notifications. Testing confirmed
 correct state classification across all thresholds, actuator response within
 the two-second polling interval, cloud-to-dashboard updates within three
 seconds, successful push notifications, and continued local safety operation
-during Wi-Fi interruption. The prototype cost approximately \$94~AUD. Key
-limitations are the prototype-scale fan, the absence of an automatic gas
+during Wi-Fi interruption. LeakSense cost approximately \$94~AUD. Key
+limitations are the small-scale fan, the absence of an automatic gas
 shutoff valve, and empirically determined voltage thresholds that require
 formal calibration against certified reference gas for production deployment.
 \end{abstract}
@@ -276,7 +276,7 @@ historical records.
 \subsection{Component Overview}
 
 Table~\ref{tab:components} lists all hardware components used in the
-LeakSense prototype.
+LeakSense system.
 
 \begin{table}[H]
 \centering
@@ -343,7 +343,7 @@ Because no manufacturer-certified LPG-to-voltage mapping exists for this
 sensor, voltage thresholds were determined empirically by observing serial
 monitor output during controlled lighter-gas exposure in a laboratory
 environment. The resulting thresholds --- 1.60\,V for Warning and 1.90\,V
-for Danger --- are prototype calibration constants. For a production safety
+for Danger --- are empirical calibration constants. For a production safety
 system, formal calibration against certified LPG reference gas or a known
 percentage lower-explosive-limit (LEL) standard would be required. The OSHA
 chemical data for LPG states that the LEL for propane is approximately 2.1\%
@@ -381,7 +381,7 @@ single-sensor designs \cite{wu2021}.The BME280 module is shown in Fig.~\ref{fig:
 The SSD1306 0.96-inch I2C OLED display provides the local visual interface
 for the device. It was selected because it operates from 3.3\,V logic and
 power, which is directly compatible with the ESP32 without level-shifting,
-and because its small footprint suits a prototype enclosure
+and because its small footprint suits a compact enclosure
 \cite{ssd1306core}. The display is connected to a dedicated I2C bus
 (TwoWire~0) on SDA GPIO~18 and SCL GPIO~23 at address 0x3C, separated from
 the BME280 bus to avoid address contention.
@@ -433,7 +433,7 @@ motor-class loads from its GPIO pins, so the relay isolates the
 microcontroller from the fan's switching transients while allowing a
 logic-level signal to control the higher-current path. The HL-52S is rated
 to switch up to 10\,A at 28\,VDC and draws approximately 60\,mA at 5\,V
-during activation, well within the prototype power budget
+during activation, well within the project power budget
 \cite{hl52srelay}. It is driven from GPIO~26 with active-low polarity
 matching the module design.
 
@@ -444,7 +444,7 @@ the relay closes the fan supply circuit and the fan disperses accumulated
 gas in the monitored space. This is the design choice that elevates
 LeakSense from a passive alarm system to an active safety system --- the
 fan provides immediate hazard mitigation without waiting for occupant
-intervention. The 40\,mm form factor is appropriate for prototype
+intervention. The 40\,mm form factor is appropriate for laboratory
 demonstration; a production deployment would substitute a mains-rated
 exhaust fan or integrate with existing kitchen ventilation, as discussed
 in Section~\ref{sec:limitations}. The fan is shown in Fig.~\ref{fig:fan}.
@@ -456,10 +456,10 @@ in Section~\ref{sec:limitations}. The fan is shown in Fig.~\ref{fig:fan}.
   \label{fig:fan}
 \end{figure}
 
-\subsubsection{Supporting Prototyping Components}
+\subsubsection{Supporting Assembly Components}
 The remaining components support wiring, assembly, and stable testing of
-the prototype. An 830 tie-point solderless breadboard with dual isolated
-power rails was used as the prototyping platform because it provides
+LeakSense. An 830 tie-point solderless breadboard with dual isolated
+power rails was used as the development platform because it provides
 sufficient connection density for the seven sensor and actuator modules
 without requiring soldered interconnects \cite{breadboard830}.
 Male-to-male and male-to-female jumper wires route signals between the
@@ -491,7 +491,7 @@ respectively. The push button connects GPIO~14 to ground with the ESP32
 internal pull-up resistor enabled.
 
 Fig.~\ref{fig:schematic} shows the complete electrical setup used for the
-prototype. It identifies the ESP32 GPIO assignments, the two separate I2C
+LeakSense. It identifies the ESP32 GPIO assignments, the two separate I2C
 buses, the SEN0565 analog input path, the LED indicator outputs, the alarm
 button input, and the relay-controlled fan and buzzer structure. This diagram
 therefore acts as the wiring reference for how the hardware subsystems are
@@ -508,13 +508,13 @@ connected to the microcontroller.
 
 Fig.~\ref{fig:circuit} is the physical representation of the same circuit on
 the breadboard. It shows how the schematic connections were implemented in the
-prototype, including the ESP32-E placement, sensor modules, OLED display,
+system, including the ESP32-E placement, sensor modules, OLED display,
 relay module, fan, buzzer, LEDs, and jumper-wire routing used during testing.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\linewidth]{circuit_wiring.png}
-  \caption{LeakSense prototype breadboard circuit showing the ESP32-E,
+  \caption{LeakSense breadboard circuit showing the ESP32-E,
   SEN0565, BME280, OLED, relay module, fan, buzzer, and LEDs.}
   \label{fig:circuit}
 \end{figure}
@@ -971,7 +971,7 @@ notification before any team member present could detect the gas by smell.
 
 \subsubsection{Empirical Voltage Thresholds}
 The most significant limitation is that the voltage thresholds (1.60\,V for
-Warning, 1.90\,V for Danger) are prototype calibration constants determined
+Warning, 1.90\,V for Danger) are empirical calibration constants determined
 empirically during laboratory testing. The SEN0565 MEMS sensor is documented
 by DFRobot as a qualitative sensor only --- it does not produce calibrated
 concentration measurements \cite{sen0565wiki}. No manufacturer-published
@@ -983,7 +983,7 @@ accommodates recalibration: threshold constants are defined at the top of
 the firmware source and can be updated without structural changes.
 
 \subsubsection{Exhaust Fan Scale}
-The exhaust fan used in this prototype is a small 12\,V unit suitable for
+The exhaust fan used in LeakSense is a small 12\,V unit suitable for
 demonstrating relay-controlled ventilation but would not provide sufficient
 airflow to disperse LPG in a real room. A production system would require a
 mains-powered exhaust fan or a direct connection to an existing kitchen
@@ -997,7 +997,7 @@ rather than only mitigating it.
 
 \subsubsection{Firebase Security Configuration}
 The database currently operates with open read/write rules appropriate for a
-development prototype. A production deployment must implement Firebase
+development configuration. A production deployment must implement Firebase
 Authentication and restrict write access to the ESP32 device credential only,
 with read access restricted to authenticated dashboard users.
 
@@ -1029,7 +1029,7 @@ from Core Electronics, Soldered, and Element14.
 
 \begin{table}[H]
 \centering
-\caption{LeakSense prototype component costs.}
+\caption{LeakSense component costs.}
 \label{tab:cost}
 \renewcommand{\arraystretch}{1.2}
 \setlength{\tabcolsep}{2.5pt}
@@ -1102,7 +1102,7 @@ commercial alternative listed above.
 LeakSense demonstrates that an affordable, integrated residential LPG safety system 
 can be built from commodity IoT components for approximately AUD~\$94 — roughly one-seventh 
 the cost of the nearest commercial product with comparable functionality, and one-sixteenth the cost 
-of systems offering certified shutoff integration. The prototype integrates a MEMS analog gas sensor, 
+of systems offering certified shutoff integration. LeakSense integrates a MEMS analog gas sensor, 
 a BME280 atmospheric sensor, relay-driven actuators, an ESP32 microcontroller, Firebase Realtime Database 
 over HTTPS REST, and a browser-accessible dashboard with 24-hour history and push notifications into a coherent five-layer IoT architecture.
 
@@ -1117,11 +1117,11 @@ latency remained under three seconds, and the Wi-Fi disconnection test confirmed
 the project's most important safety property: all local actuation continues 
 independently of cloud connectivity.
 
-Beyond the working prototype, the project contributes a reproducible reference architecture 
+Beyond the working system, the project contributes a reproducible reference architecture 
 for low-cost residential safety IoT. The separation of time-critical safety logic on the 
 microcontroller from non-critical telemetry and visualisation in the cloud is a pattern 
 that generalises to other household hazard domains, including smoke, carbon monoxide, 
-and water leak detection. The empirical voltage thresholds, prototype-scale fan, and absence 
+and water leak detection. The empirical voltage thresholds, small-scale fan, and absence 
 of a physical shutoff valve are acknowledged limitations rather than design flaws; each has 
 a defined remediation path in Section VII, and none require structural redesign of the existing architecture.
 
@@ -1138,8 +1138,8 @@ provides a credible foundation for a deployable open residential gas safety prod
 \section{How-To Guide}
 \label{sec:howto}
 
-This guide describes how to assemble, configure, and run the LeakSense
-prototype from scratch.
+This guide describes how to assemble, configure, and run LeakSense from
+scratch.
 
 \subsection{Hardware Setup}
 
@@ -1336,7 +1336,7 @@ Electronics, 2024. [Online]. Available:
 \label{sec:coding}
 
 The code function explanations and source listings document the implementation
-used by the LeakSense prototype. The same source code is also available in the
+used by LeakSense. The same source code is also available in the
 project GitHub repository:
 \url{https://github.com/sahilppatel1807/CITS5506-LeakSense-IoT}. For hardware
 assembly, firmware upload, Firebase setup, and dashboard operation instructions,
@@ -1354,7 +1354,7 @@ logic on the ESP32 and presentation logic in the browser.
 
 Table~\ref{tab:codefiles} summarises the files included in Appendix~B. The
 source listings are included directly from the repository so the report shows
-the same code used by the prototype.
+the same code used by LeakSense.
 
 \begin{table}[H]
 \centering

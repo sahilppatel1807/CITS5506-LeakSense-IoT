@@ -1,225 +1,221 @@
-# LeakSense – Smart LPG Gas Leakage Detection and Automatic Safety System
-
-**CITS5506: Internet of Things — Group 27**
-The University of Western Australia
-
-| Member | Student ID | Role |
-|---|---|---|
-| Yuxuan Xi | 24319908 | Hardware Assembly & Circuit Design |
-| Yiming Zhao | 24139958 | ESP32 Firmware Development |
-| Sahil Pankajbhai Patel | 24562775 | Web Dashboard Development |
-| Sohaib Ahmed Khan | 24756957 | Cloud Integration & System Testing |
-
----
+# LeakSense - Smart LPG Gas Leakage Detection and Automatic Safety System
 
 ## Overview
 
-LeakSense is an IoT-based smart safety system that continuously monitors LPG gas concentration and automatically responds when dangerous levels are detected. The system provides both local physical response (buzzer, fan, LEDs, OLED display) and remote monitoring through a cloud-connected web dashboard.
+LeakSense is an IoT-based smart LPG safety system that monitors gas sensor
+voltage, evaluates environmental risk, activates local safety outputs, and
+publishes live readings to Firebase for remote dashboard monitoring.
+
+The system combines:
+
+- SEN0565 analog gas sensing
+- BME280 temperature and humidity sensing
+- ESP32 local safety logic
+- Relay-controlled ventilation
+- Buzzer and LED alerts
+- OLED local status display
+- Firebase Realtime Database telemetry
+- Browser dashboard with live chart, history, and notifications
 
 ---
 
 ## Problem
 
-LPG gas leaks in homes are a leading cause of fires, explosions, and carbon monoxide poisoning. Existing home detectors only produce a local alarm — they do not activate ventilation, log historical data, or allow remote monitoring. LeakSense addresses this gap with an integrated, low-cost IoT solution.
+Residential LPG leaks can create fire, explosion, and health hazards. Basic
+home detectors usually provide only a local audible alarm, with no automatic
+ventilation, remote monitoring, or historical event log. LeakSense addresses
+this gap with a low-cost IoT safety system that responds locally and reports
+state changes remotely.
 
 ---
 
 ## System Architecture
 
-```
-Gas Sensor (I2C) ─┐
-                  ├──► ESP32-E ──► Relay ──► Exhaust Fan
-BME280 (I2C) ─────┘      │
-                          ├──► Buzzer
-                          ├──► LEDs (Green / Red)
-                          ├──► OLED Display
-                          └──► WiFi ──► Firebase ──► Web Dashboard
+```text
+SEN0565 Gas Sensor (analog) -- GPIO39
+                                  |
+BME280 (I2C bus 1) -------------- | 
+                                  v
+                              ESP32-E
+                                  |
+      ---------------------------------------------------------
+      |              |              |           |             |
+  Relay/Fan       Buzzer       RGB LEDs       OLED        Wi-Fi
+      |              |              |           |             |
+ Ventilation     Alarm      State display  Local UI     Firebase
+                                                            |
+                                                    Web Dashboard
 ```
 
 ### Five IoT Components
 
 | # | Component | Implementation |
-|---|---|---|
-| 1 | Sensors | DFRobot Calibrated Gas Sensor (I2C) + BME280 (temp/humidity) |
-| 2 | Computing Node | FireBeetle ESP32-E |
-| 3 | Communication | WiFi + Firebase Realtime Database |
-| 4 | Cloud & Dashboard | Firebase + HTML/CSS/JS web dashboard |
-| 5 | Actions | Buzzer, relay-controlled fan, LEDs, OLED |
+|---:|---|---|
+| 1 | Sensors | SEN0565 gas sensor + BME280 temperature/humidity sensor |
+| 2 | Computing node | FireBeetle ESP32-E |
+| 3 | Communication | Wi-Fi + HTTPS Firebase REST upload |
+| 4 | Cloud and dashboard | Firebase Realtime Database + HTML/CSS/JavaScript dashboard |
+| 5 | Actions | Relay-controlled fan, buzzer, green/yellow/red LEDs, OLED |
 
 ---
 
-## Three-State Safety Logic
+## Safety Logic
 
-| State | Threshold | Local Response | Cloud |
+LeakSense uses gas voltage thresholds from the SEN0565 and a thermal
+escalation rule from the BME280.
+
+| State | Gas condition | Local response | Dashboard/cloud |
 |---|---|---|---|
-| SAFE | < 300 ppm | Green LED on, fan off, buzzer silent | Data logged |
-| WARNING | 300–500 ppm | Red LED blink, fan on, buzzer intermittent | Alert sent |
-| DANGER | > 500 ppm | Red LED solid, fan on, buzzer continuous | Alert sent |
+| Safe | Voltage < 1.60 V | Green LED on, fan off, buzzer off | Live reading shown |
+| Warning | Voltage >= 1.60 V and < 1.90 V | Yellow LED on | Warning state logged |
+| Danger | Voltage >= 1.90 V | Red LED, fan on, buzzer cycle | Danger alert logged |
+| Extreme | Voltage >= 2.20 V | Same local response as Danger | Extreme dashboard label |
 
-> Thresholds are defined in `firmware/src/config.h` and `dashboard/js/charts.js`. Adjust after hardware calibration.
+Thermal escalation promotes Warning to Danger when the temperature rises by
+5 C or more between readings, or when absolute temperature reaches 55 C.
 
-> Actuation logic runs entirely on-device — fan and buzzer activate even without WiFi.
+Local actuation runs on the ESP32. Fan, buzzer, and LED safety behaviour
+continues even when Wi-Fi or Firebase is unavailable.
 
 ---
 
 ## Hardware Components
 
-| Component | Purpose | Status |
-|---|---|---|
-| FireBeetle ESP32-E | Main IoT controller | ✅ Available at UWA |
-| DFRobot Calibrated Gas Sensor (I2C) | LPG detection — factory calibrated, direct ppm over I2C | ⏳ On order (1–3 weeks) |
-| BME280 Atmospheric Sensor | Temperature and humidity display | ⏳ To be confirmed with Andy |
-| OLED SSD1306 (I2C) | Local status display | ✅ Available at UWA |
-| 5V Relay Module | Fan control with electrical isolation | ✅ Available at UWA |
-| Delta 5V 40mm Exhaust Fan | Ventilation simulation | ⏳ To be confirmed with Andy |
-| Gravity Digital Buzzer | Audible alert | ✅ Available at UWA |
-| Green + Red LEDs | Visual status indicators | ✅ Available at UWA |
-| Breadboard + Jumper Wires | Prototyping | ✅ Available at UWA |
-
-> **Note:** The original MQ-6 I2C Qwiic sensor was replaced following advice from the UWA lab technician (Andrew Burrell). The DFRobot calibrated gas sensor outputs factory-calibrated ppm values directly over I2C, removing the need for manual Rs/R0 conversion and environmental compensation calculations.
-
-### Wiring (I2C Bus)
-
-All I2C devices share the same SDA/SCL pins — wired in parallel.
-
-| Component | SDA | SCL | I2C Address |
-|---|---|---|---|
-| DFRobot Gas Sensor | GPIO 21 | GPIO 22 | 0x74 |
-| BME280 | GPIO 21 | GPIO 22 | 0x76 |
-| OLED SSD1306 | GPIO 21 | GPIO 22 | 0x3C |
-
-| Actuator | ESP32 Pin |
+| Component | Purpose |
 |---|---|
-| Relay (Fan) | GPIO 26 |
-| Buzzer | GPIO 25 |
-| Green LED | GPIO 32 |
-| Red LED | GPIO 33 |
+| FireBeetle ESP32-E | Main IoT controller |
+| SEN0565 MEMS CH4 gas sensor | Analog gas voltage input |
+| BME280 atmospheric sensor | Temperature and humidity sensing |
+| OLED SSD1306 display | Local live status output |
+| 5 V relay module | Exhaust fan switching |
+| Delta 5 V / 40 mm fan | Ventilation response |
+| Gravity digital buzzer | Audible alarm |
+| Green LED | Safe state indicator |
+| Yellow LED | Warning state indicator |
+| Red LED | Danger and Extreme indicator |
+| Push button | Silences current alarm cycle |
+| Breadboard and jumper wires | Circuit assembly |
+
+---
+
+## Wiring Summary
+
+| Signal / device | ESP32 pin |
+|---|---|
+| SEN0565 analog output | GPIO39 |
+| OLED SDA | GPIO18 |
+| OLED SCL | GPIO23 |
+| BME280 SDA | GPIO22 |
+| BME280 SCL | GPIO21 |
+| Relay / fan control | GPIO26 |
+| Buzzer | GPIO25 |
+| Green LED | GPIO17 |
+| Yellow LED | GPIO16 |
+| Red LED | GPIO4 |
+| Alarm cancel button | GPIO14 |
+
+The OLED and BME280 use separate I2C buses to avoid address conflicts and make
+wiring/debugging clearer.
 
 ---
 
 ## Repository Structure
 
-```
-CITS5506-LEAKSENSE-IOT/
-│
-├── firmware/                  # ESP32 Arduino source code (Yiming)
-│   ├── src/
-│   │   ├── main.ino           # Main firmware loop
-│   │   ├── config.h           # Pin definitions and thresholds
-│   │   └── secrets.h          # WiFi + Firebase credentials (NOT committed)
-│   └── platformio.ini         # PlatformIO board and library config
-│
-├── dashboard/                 # Web dashboard (Sahil)
-│   ├── index.html             # Dashboard HTML structure
+```text
+CITS5506-LeakSense-IoT/
+|
+├── dashboard/
+│   ├── index.html
 │   ├── css/
-│   │   └── style.css          # All dashboard styles
-│   └── js/
-│       ├── mock.js            # Simulated sensor data (development only)
-│       ├── charts.js          # Chart.js trend graph
-│       ├── dashboard.js       # Main UI logic and state management
-│       └── firebase.js        # Firebase realtime listener
-│
-├── docs/                      # Project documentation
-│   └── firebeetle-esp32-e/    # Hardware datasheets and references
-│
-├── hardware/                  # Circuit diagrams and wiring images
-├── testing/                   # Test results and logs
+│   │   └── style.css
+│   ├── js/
+│   │   ├── charts.js
+│   │   ├── dashboard.js
+│   │   ├── firebase.js
+│   │   ├── mock.js
+│   │   ├── secrets.example.js
+│   │   └── secrets.js              # local only, not committed
+│   └── service-worker.js
+|
+├── firmware/
+│   └── blinking/
+│       ├── platformio.ini
+│       └── src/
+│           ├── main.cpp
+│           ├── secrets.h.example
+│           └── secrets.h           # local only, not committed
+|
+├── docs/
+├── report/
 └── README.md
 ```
 
 ---
 
-## Current Status
-
-| Task | Owner | Status |
-|---|---|---|
-| Project proposal submitted | All | ✅ Done |
-| Hardware collection from UWA lab | Yuxuan | ✅ Done |
-| DFRobot gas sensor | Yuxuan | ⏳ Awaiting delivery (1–3 weeks) |
-| Web dashboard (mock data) | Sahil | ✅ Done |
-| Firebase setup | Sohaib | ⏳ Pending |
-| ESP32 firmware | Yiming | ⏳ Waiting for hardware |
-| Hardware assembly and wiring | Yuxuan | ⏳ Waiting for sensor delivery |
-| End-to-end integration | All | ⏳ Pending |
-
----
-
 ## Getting Started
 
-### Dashboard (Sahil)
+### Dashboard
 
-No installation needed — plain HTML/CSS/JS.
+The dashboard is a plain HTML/CSS/JavaScript app.
 
 ```bash
-# Just open in browser
 open dashboard/index.html
 ```
 
-Use the simulator slider to test Safe / Warning / Danger states with mock data.
+For live Firebase data:
 
-**To connect to Firebase** once Sohaib has it set up:
-1. Paste the Firebase config into `dashboard/js/firebase.js`
-2. In `dashboard/js/dashboard.js`, comment out the mock interval and uncomment the Firebase listener
-3. Uncomment the Firebase script tags in `index.html`
+1. Copy `dashboard/js/secrets.example.js` to `dashboard/js/secrets.js`.
+2. Paste the Firebase web app config into `secrets.js`.
+3. Open `dashboard/index.html` in a browser.
+4. Allow browser notifications if alert popups are required.
 
----
+If Firebase is not configured, the dashboard falls back to mock readings from
+`dashboard/js/mock.js`.
 
-### Firmware (Yiming)
+### Firmware
 
-> ⚠️ Wait for the DFRobot gas sensor to arrive before writing sensor reading code. The library and I2C address depend on the exact model Andy orders.
+Requirements:
 
-**Requirements:** VS Code + PlatformIO extension
+- VS Code
+- PlatformIO extension
+- FireBeetle ESP32-E connected by USB
 
 ```bash
-# 1. Open the firmware/ folder in VS Code
-# 2. Create your secrets file — never commit this
-cp firmware/src/secrets.h.example firmware/src/secrets.h
-
-# 3. Fill in WiFi credentials and Firebase details in secrets.h
-# 4. Click Upload in PlatformIO bottom toolbar
-# 5. Open Serial Monitor at 115200 baud to see live readings
+cp firmware/blinking/src/secrets.h.example firmware/blinking/src/secrets.h
 ```
 
-**DFRobot gas sensor — reading ppm is one line, no formula needed:**
+Then edit `firmware/blinking/src/secrets.h` with:
 
-```cpp
-#include "DFRobot_GasSensor.h"
-DFRobot_GasSensor_I2C sensor(&Wire, 0x74);
-float ppm = sensor.readGasConcentrationPPM();
-```
+- Wi-Fi SSID
+- Wi-Fi password
+- Firebase Realtime Database host
+- Firebase database secret
+
+Build and upload from PlatformIO using the `firebeetle2_esp32e` environment.
+Open the Serial Monitor at `115200` baud to view sensor readings, state
+classification, Wi-Fi status, and Firebase upload logs.
 
 ---
 
-### Firebase Setup (Sohaib)
+## Firebase Data Shape
 
-1. Go to [firebase.google.com](https://firebase.google.com) → Create project
-2. Enable **Realtime Database** → Start in test mode
-3. Set database rules for testing:
-
-```json
-{
-  "rules": {
-    ".read": true,
-    ".write": true
-  }
-}
-```
-
-4. Share the config object with Sahil → paste into `dashboard/js/firebase.js`
-5. Share the database secret with Yiming → paste into `firmware/src/secrets.h`
-
-**Expected data structure written by ESP32 at `leaksense/latest`:**
+The ESP32 writes the latest reading to `leaksense/latest` and appends history
+records to `leaksense/history`.
 
 ```json
 {
-  "ppm_compensated": 145.3,
-  "ppm_raw": 145.3,
+  "ppm_compensated": 120.5,
+  "ppm_raw": 130.0,
+  "voltage": 0.682,
   "temperature": 23.4,
   "humidity": 48.2,
-  "state": "safe",
+  "state": "SAFE",
   "fan": false,
   "buzzer": false,
-  "timestamp": 1234567890
+  "thermal_risk": false,
+  "timestamp": {
+    ".sv": "timestamp"
+  }
 }
 ```
 
@@ -229,18 +225,23 @@ float ppm = sensor.readGasConcentrationPPM();
 
 | Layer | Technology |
 |---|---|
-| Microcontroller | ESP32-E, Arduino C, PlatformIO |
-| Gas Sensor | DFRobot Calibrated I2C Gas Sensor |
-| Environmental Sensor | BME280 (I2C) |
-| Communication | WiFi, Firebase Realtime Database |
+| Microcontroller | FireBeetle ESP32-E, Arduino framework, PlatformIO |
+| Gas sensing | SEN0565 analog gas sensor |
+| Environmental sensing | BME280 |
+| Local display | SSD1306 OLED |
+| Communication | Wi-Fi, HTTPS REST |
+| Cloud | Firebase Realtime Database |
 | Dashboard | HTML, CSS, JavaScript, Chart.js |
-| Version Control | Git + GitHub |
+| Version control | Git + GitHub |
 
 ---
 
 ## Important Notes
 
-- `firmware/src/secrets.h` is in `.gitignore` — **never commit WiFi or Firebase credentials**
-- Thresholds (300/500 ppm) must match in both `firmware/src/config.h` and `dashboard/js/charts.js`
-- Dashboard runs fully with mock data — Firebase only needed for live hardware connection
-- Do not write MQ-6 specific firmware — the new DFRobot sensor uses a different library
+- Do not commit `firmware/blinking/src/secrets.h`.
+- Do not commit `dashboard/js/secrets.js`.
+- Safety thresholds are defined in `firmware/blinking/src/main.cpp`.
+- Dashboard display thresholds are defined in `dashboard/js/dashboard.js` and
+  `dashboard/js/charts.js`.
+- The SEN0565 is qualitative; formal calibration against certified LPG
+  reference gas is required before production deployment.
